@@ -62,6 +62,7 @@ export async function fetchTransactions(opts) {
   const res = await fetch(`${TX_URL}?${params}`, {
     method: "GET",
     headers: buildHeaders(token),
+    signal: AbortSignal.timeout(15_000),
   });
 
   if (res.status === 401 || res.status === 403) {

@@ -18,11 +18,14 @@ import { requireApiKey } from "./auth.js";
 import {
   allocateUniqueAmount,
   createInvoice,
+  findPendingByRef,
   getConfig,
   getInvoice,
+  getSetting,
   getSettings,
   listInvoices,
   publicInvoice,
+  rateLimit,
   setSetting,
 } from "./db.js";
 import { testConnection } from "./gobiz.js";
@@ -48,6 +51,7 @@ function err(message, status = 400, code = "ERROR") {
 
 async function readJson(request) {
   const raw = await request.text();
+  if (raw.length > 100_000) throw new Error("payload too large");
   if (!raw) return {};
   return JSON.parse(raw);
 }
@@ -144,40 +148,65 @@ async function handleApi(request, env, ctx) {
     const base = Math.floor(Number(body.amount));
     if (!Number.isFinite(base) || base < 1) return err("amount must be positive integer IDR", 400, "INVALID_AMOUNT");
 
+    // ponytail: 10/min/IP, bump via env var if a real merchant outgrows it
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!(await rateLimit(env.DB, `inv:${ip}`, 10))) {
+      return err("rate limit exceeded", 429, "RATE_LIMITED");
+    }
+
     const cfg = await getConfig(env.DB);
     if (!cfg.qrisStatic) return err("qris_static not set — open WebUI setup", 400, "NOT_CONFIGURED");
 
-    const expireMin = Math.max(1, Number(body.expire_min ?? env.DEFAULT_EXPIRE_MIN ?? 30));
-    const { amount, uniqueCode } = await allocateUniqueAmount(env.DB, base);
-
-    let qris;
-    try {
-      qris = staticToDynamic(cfg.qrisStatic, amount);
-    } catch (e) {
-      return err(e.message, 400, e.code || "QRIS_ERROR");
+    const merchantRef = body.merchant_ref ? String(body.merchant_ref).slice(0, 128) : null;
+    const existing = await findPendingByRef(env.DB, merchantRef);
+    if (existing) {
+      return json(
+        {
+          ...publicInvoice(existing),
+          qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(existing.qris_payload)}`,
+        },
+        201
+      );
     }
 
+    const expireMin = Math.max(1, Number(body.expire_min ?? env.DEFAULT_EXPIRE_MIN ?? 30));
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const callback =
       (body.callback_url && String(body.callback_url).trim()) ||
       cfg.defaultCallback ||
       null;
 
-    const inv = await createInvoice(env.DB, {
-      id,
-      merchantRef: body.merchant_ref ? String(body.merchant_ref).slice(0, 128) : null,
-      amount,
-      baseAmount: base,
-      uniqueCode,
-      qrisPayload: qris,
-      callbackUrl: callback,
-      expiresAt: isoPlusMinutes(expireMin),
-    });
+    // retry on amount collision race (partial unique index makes dup pending amounts impossible)
+    let inv = null;
+    for (let attempt = 0; attempt < 5 && !inv; attempt++) {
+      const { amount, uniqueCode } = await allocateUniqueAmount(env.DB, base);
+      let qris;
+      try {
+        qris = staticToDynamic(cfg.qrisStatic, amount);
+      } catch (e) {
+        return err(e.message, 400, e.code || "QRIS_ERROR");
+      }
+      try {
+        inv = await createInvoice(env.DB, {
+          id,
+          merchantRef,
+          amount,
+          baseAmount: base,
+          uniqueCode,
+          qrisPayload: qris,
+          callbackUrl: callback,
+          expiresAt: isoPlusMinutes(expireMin),
+        });
+      } catch (e) {
+        if (!/unique/i.test(String(e.message || ""))) throw e;
+      }
+    }
+    if (!inv) return err("unique amount exhausted — try again", 409, "AMOUNT_EXHAUSTED");
 
     return json(
       {
         ...publicInvoice(inv),
-        qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qris)}`,
+        qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inv.qris_payload)}`,
       },
       201
     );
@@ -194,9 +223,13 @@ async function handleApi(request, env, ctx) {
   if (method === "GET" && invMatch) {
     const inv = await getInvoice(env.DB, invMatch[1]);
     if (!inv) return err("not found", 404, "NOT_FOUND");
-    // opportunistic poll if still pending
+    // opportunistic poll if still pending — throttled, 30s cooldown
     if (inv.status === "pending") {
-      ctx.waitUntil(runPoll(env));
+      const last = Number((await getSetting(env.DB, "last_poll_at")) || 0);
+      if (Date.now() - last > 30_000) {
+        await setSetting(env.DB, "last_poll_at", String(Date.now()));
+        ctx.waitUntil(runPoll(env));
+      }
     }
     const fresh = (await getInvoice(env.DB, invMatch[1])) || inv;
     return json(publicInvoice(fresh));
@@ -217,8 +250,8 @@ export default {
       if (env.ASSETS) return env.ASSETS.fetch(request);
       return new Response("qris-pg — set assets.directory", { status: 200 });
     } catch (e) {
-      console.error(JSON.stringify({ message: "unhandled", error: e.message || String(e) }));
-      return err(e.message || "internal error", 500, e.code || "INTERNAL");
+      console.error(JSON.stringify({ message: "unhandled", error: e.message || String(e), stack: e.stack }));
+      return err("internal error", 500, "INTERNAL");
     }
   },
 

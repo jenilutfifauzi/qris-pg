@@ -63,6 +63,8 @@ curl -s https://YOUR.workers.dev/api/invoices/ID -H "X-API-Key: $API_KEY"
 
 Callback saat lunas: `POST` ke `callback_url` → `{ id, merchant_ref, amount, status, tx_id, paid_at, unique_code }`
 
+Header `X-Qris-Signature: sha256=<hex>` = HMAC-SHA256(raw body, `API_KEY`) — verify di sisi penerima webhook (mis. `createHmac('sha256', process.env.QRIS_API_KEY).update(rawBody).digest('hex')`). Idempotensi: POST dengan `merchant_ref` yang masih `pending` → return invoice yang sama.
+
 ---
 
 ## Local

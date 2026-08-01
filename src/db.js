@@ -139,7 +139,26 @@ export async function expireOld(db) {
        WHERE status = 'pending' AND datetime(expires_at) <= datetime('now')`
     )
     .run();
+  // prune stale rate-limit windows (runs every cron minute)
+  await db
+    .prepare("DELETE FROM rate_limits WHERE minute < ?")
+    .bind(Math.floor(Date.now() / 60000) - 60)
+    .run();
   return r?.meta?.changes ?? 0;
+}
+
+/** Atomic per-key counter (window = minute). Returns false when over limit. */
+export async function rateLimit(db, key, limit) {
+  const minute = Math.floor(Date.now() / 60000);
+  await db
+    .prepare(
+      `INSERT INTO rate_limits (key, minute, count) VALUES (?, ?, 1)
+       ON CONFLICT(key) DO UPDATE SET count = count + 1, minute = excluded.minute`
+    )
+    .bind(key, minute)
+    .run();
+  const row = await db.prepare("SELECT count FROM rate_limits WHERE key = ?").bind(key).first();
+  return (row?.count ?? 0) <= limit;
 }
 
 /** Mark paid once; returns invoice or null if already claimed/paid. */
@@ -159,10 +178,10 @@ export async function markPaid(db, invoiceId, txId) {
   await db
     .prepare(
       `UPDATE invoices
-       SET status = 'paid', paid_at = datetime('now'), tx_id = ?
+       SET status = 'paid', paid_at = datetime('now'), tx_id = ?, callback_sent = ?
        WHERE id = ? AND status = 'pending'`
     )
-    .bind(txId, invoiceId)
+    .bind(txId, inv.callback_url ? 0 : 1, invoiceId)
     .run();
 
   return getInvoice(db, invoiceId);
@@ -177,6 +196,15 @@ export async function findPendingByAmount(db, amount) {
        ORDER BY created_at ASC LIMIT 1`
     )
     .bind(amount)
+    .first();
+}
+
+/** Idempotency: return an existing pending invoice with the same merchant_ref. */
+export async function findPendingByRef(db, ref) {
+  if (!ref) return null;
+  return db
+    .prepare("SELECT * FROM invoices WHERE merchant_ref = ? AND status = 'pending' LIMIT 1")
+    .bind(ref)
     .first();
 }
 

@@ -1,5 +1,12 @@
 const $ = (id) => document.getElementById(id);
 
+function esc(s) {
+  return String(s ?? "").replace(
+    /[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
+
 function apiKey() {
   return localStorage.getItem("qris_pg_api_key") || "";
 }
@@ -150,11 +157,11 @@ async function loadList() {
     for (const inv of invoices || []) {
       const tr = document.createElement("tr");
       tr.innerHTML = `
-        <td><code>${inv.id}</code></td>
-        <td>${inv.merchant_ref || "—"}</td>
+        <td><code>${esc(inv.id)}</code></td>
+        <td>${esc(inv.merchant_ref || "—")}</td>
         <td>${fmtRp(inv.amount)}</td>
-        <td class="status-${inv.status}">${inv.status}</td>
-        <td>${inv.created_at || ""}</td>`;
+        <td class="status-${esc(inv.status)}">${esc(inv.status)}</td>
+        <td>${esc(inv.created_at || "")}</td>`;
       tbody.appendChild(tr);
     }
     show($("listOut"), { count: (invoices || []).length });
