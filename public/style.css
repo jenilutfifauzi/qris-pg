@@ -1,0 +1,87 @@
+:root {
+  --bg: #0f1419;
+  --card: #1a2332;
+  --text: #e7ecf3;
+  --muted: #8b9bb4;
+  --accent: #3d8bfd;
+  --ok: #3dd68c;
+  --border: #2a3548;
+  --danger: #f07178;
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0 auto;
+  max-width: 720px;
+  padding: 1.25rem;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.45;
+}
+header h1 { margin: 0; font-size: 1.4rem; }
+.muted { color: var(--muted); font-size: 0.9rem; }
+nav {
+  display: flex;
+  gap: 0.4rem;
+  margin: 1rem 0;
+  flex-wrap: wrap;
+}
+nav button, button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: 8px;
+  padding: 0.55rem 0.9rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+nav button { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+nav button.active { background: var(--accent); color: #fff; border-color: transparent; }
+button.secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.tab { display: none; background: var(--card); padding: 1rem; border-radius: 12px; border: 1px solid var(--border); }
+.tab.active { display: block; }
+label { display: block; margin: 0.75rem 0 0.25rem; font-size: 0.85rem; color: var(--muted); }
+input, textarea, select {
+  width: 100%;
+  margin-top: 0.25rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.hint { font-size: 0.8rem; color: var(--muted); margin: 0.25rem 0 0.75rem; }
+.row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; align-items: center; }
+.out {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  font-size: 0.78rem;
+  overflow: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+#createResult { margin-top: 1rem; }
+#resQr {
+  display: block;
+  margin: 0.75rem 0;
+  background: #fff;
+  border-radius: 8px;
+  padding: 8px;
+}
+.table-wrap { overflow: auto; margin-top: 0.75rem; }
+table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+th, td { text-align: left; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border); }
+th { color: var(--muted); font-weight: 600; }
+.status-paid { color: var(--ok); }
+.status-expired { color: var(--danger); }
+.status-pending { color: #ffcc66; }
+footer { margin-top: 1.5rem; text-align: center; }
+code { font-size: 0.85em; }

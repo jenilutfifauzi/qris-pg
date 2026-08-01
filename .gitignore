@@ -1,0 +1,15 @@
+node_modules/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.DS_Store
+worker-configuration.d.ts
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+.har
+*.har
+data/
