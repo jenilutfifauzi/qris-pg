@@ -19,7 +19,7 @@
     {
       "binding": "DB",
       "database_name": "qris-pg",
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "e8377964-b5dd-4636-88e6-6454fed67a81",
       "migrations_dir": "migrations"
     }
   ],

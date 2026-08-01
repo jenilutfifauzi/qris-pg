@@ -132,7 +132,10 @@ export async function runPoll(env) {
         tx_id: t.transaction_id,
       })
     );
-    await sendCallback(paid, env.API_KEY);
+    const cb = await sendCallback(paid, env.API_KEY);
+    if (cb.ok) {
+      await db.prepare("UPDATE invoices SET callback_sent = 1 WHERE id = ?").bind(paid.id).run();
+    }
   }
 
   const retried = await retryUnsentCallbacks(db, env.API_KEY);
