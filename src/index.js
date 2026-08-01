@@ -14,7 +14,7 @@
  * Cron: every minute → poll mutasi + callback
  * WebUI: public/ (static assets)
  */
-import { requireApiKey } from "./auth.js";
+import { requireApiKey, requireBasicAuth } from "./auth.js";
 import {
   allocateUniqueAmount,
   createInvoice,
@@ -245,8 +245,17 @@ export default {
       if (url.pathname.startsWith("/api/")) {
         return await handleApi(request, env, ctx);
       }
-      // static assets (WebUI) served by platform when path matches;
-      // SPA fallback via not_found_handling
+      // dashboard + static assets — basic auth (public-facing)
+      const guard = await requireBasicAuth(request, env);
+      if (!guard.ok) {
+        return new Response(JSON.stringify({ error: guard.error }), {
+          status: guard.status,
+          headers: {
+            "Content-Type": "application/json; charset=utf-8",
+            "WWW-Authenticate": 'Basic realm="qris-pg"',
+          },
+        });
+      }
       if (env.ASSETS) return env.ASSETS.fetch(request);
       return new Response("qris-pg — set assets.directory", { status: 200 });
     } catch (e) {

@@ -29,3 +29,26 @@ export async function requireApiKey(request, env) {
   }
   return { ok: true };
 }
+
+/** Basic auth for the dashboard (public-facing). Uses timing-safe compare. */
+export async function requireBasicAuth(request, env) {
+  const user = (env.DASH_USER || "").trim();
+  const pass = (env.DASH_PASS || "").trim();
+  if (!user || !pass) return { ok: false, status: 503, error: "DASH_USER/DASH_PASS not set" };
+  const auth = request.headers.get("authorization") || "";
+  const m = auth.match(/^Basic\s+(.+)$/i);
+  if (!m) return { ok: false, status: 401, error: "unauthorized" };
+  let decoded;
+  try {
+    decoded = atob(m[1]);
+  } catch {
+    return { ok: false, status: 401, error: "unauthorized" };
+  }
+  const i = decoded.indexOf(":");
+  const gotUser = i >= 0 ? decoded.slice(0, i) : "";
+  const gotPass = i >= 0 ? decoded.slice(i + 1) : "";
+  if (!(await timingSafeEqualStr(gotUser, user)) || !(await timingSafeEqualStr(gotPass, pass))) {
+    return { ok: false, status: 401, error: "unauthorized" };
+  }
+  return { ok: true };
+}

@@ -56,8 +56,14 @@ document.querySelectorAll("nav [data-tab]").forEach((btn) => {
 });
 
 $("apiKey").value = apiKey();
-$("apiKey").addEventListener("change", () => saveApiKey($("apiKey").value.trim()));
-$("apiKey").addEventListener("blur", () => saveApiKey($("apiKey").value.trim()));
+$("apiKey").addEventListener("change", () => {
+  saveApiKey($("apiKey").value.trim());
+  loadSettings();
+});
+$("apiKey").addEventListener("blur", () => {
+  saveApiKey($("apiKey").value.trim());
+  loadSettings();
+});
 
 async function loadSettings() {
   saveApiKey($("apiKey").value.trim());
@@ -78,12 +84,11 @@ async function loadSettings() {
 
 $("btnSave").onclick = async () => {
   saveApiKey($("apiKey").value.trim());
-  const body = {
-    merchant_id: $("merchantId").value.trim(),
-    qris_static: $("qrisStatic").value.trim(),
-    default_callback: $("defaultCallback").value.trim(),
-    lookback_hours: Number($("lookbackHours").value) || 6,
-  };
+  const body = {};
+  if ($("merchantId").value.trim()) body.merchant_id = $("merchantId").value.trim();
+  if ($("qrisStatic").value.trim()) body.qris_static = $("qrisStatic").value.trim();
+  if ($("defaultCallback").value.trim()) body.default_callback = $("defaultCallback").value.trim();
+  body.lookback_hours = Number($("lookbackHours").value) || 6;
   const tok = $("gobizToken").value.trim();
   if (tok) body.gobiz_token = tok;
   try {
