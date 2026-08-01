@@ -2,12 +2,14 @@ import {
   expireOld,
   findPendingByAmount,
   getConfig,
+  getSetting,
   isTxClaimed,
   listPending,
   markPaid,
   publicInvoice,
+  setSetting,
 } from "./db.js";
-import { fetchTransactions } from "./gobiz.js";
+import { fetchTransactions, refreshAccessToken } from "./gobiz.js";
 
 async function hmacSha256Hex(secret, text) {
   const key = await crypto.subtle.importKey(
@@ -95,6 +97,7 @@ export async function runPoll(env) {
   }
 
   let txs;
+  let refreshed = false;
   try {
     txs = await fetchTransactions({
       merchantId: cfg.merchantId,
@@ -103,13 +106,50 @@ export async function runPoll(env) {
       size: 40,
     });
   } catch (e) {
-    return {
-      expired,
-      matched: 0,
-      pending: pending.length,
-      error: e.message,
-      code: e.code,
-    };
+    // token expired → auto-refresh via stored refresh token (rotating), retry once
+    if (e.code === "AUTH_FAILED") {
+      const rt = await getSetting(db, "gobiz_refresh");
+      if (!rt) {
+        return {
+          expired,
+          matched: 0,
+          pending: pending.length,
+          error: "AUTH_FAILED — no refresh token configured (set gobiz_refresh)",
+          code: "AUTH_FAILED",
+        };
+      }
+      try {
+        const pair = await refreshAccessToken(rt);
+        await setSetting(db, "gobiz_token", pair.accessToken);
+        if (pair.refreshToken && pair.refreshToken !== rt) {
+          await setSetting(db, "gobiz_refresh", pair.refreshToken);
+        }
+        refreshed = true;
+        console.log(JSON.stringify({ message: "gobiz token auto-refreshed" }));
+        txs = await fetchTransactions({
+          merchantId: cfg.merchantId,
+          token: pair.accessToken,
+          lookbackHours: cfg.lookbackHours,
+          size: 40,
+        });
+      } catch (e2) {
+        return {
+          expired,
+          matched: 0,
+          pending: pending.length,
+          error: `AUTH_FAILED (refresh: ${e2.message})`,
+          code: e2.code || "AUTH_FAILED",
+        };
+      }
+    } else {
+      return {
+        expired,
+        matched: 0,
+        pending: pending.length,
+        error: e.message,
+        code: e.code,
+      };
+    }
   }
 
   let matched = 0;
@@ -139,7 +179,7 @@ export async function runPoll(env) {
   }
 
   const retried = await retryUnsentCallbacks(db, env.API_KEY);
-  return { expired, matched, pending: pending.length, scanned: txs.length, retried: retried.sent };
+  return { expired, matched, pending: pending.length, scanned: txs.length, retried: retried.sent, refreshed };
 }
 
 export { publicInvoice };

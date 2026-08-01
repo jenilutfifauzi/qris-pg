@@ -76,7 +76,10 @@ async function loadSettings() {
     $("gobizToken").placeholder = s.gobiz_token_set
       ? "sudah tersimpan — paste baru hanya kalau mau ganti"
       : "paste Bearer dari Network portal";
-    show($("setupOut"), { loaded: true, token_set: s.gobiz_token_set, qris_set: s.qris_static_set });
+    $("gobizRefresh").placeholder = s.gobiz_refresh_set
+      ? "sudah tersimpan — paste baru hanya kalau mau ganti"
+      : "dari cookie refresh_token portal";
+    show($("setupOut"), { loaded: true, token_set: s.gobiz_token_set, refresh_set: s.gobiz_refresh_set, qris_set: s.qris_static_set });
   } catch (e) {
     show($("setupOut"), { error: e.message, hint: e.status === 401 ? "API key salah / belum di-set" : "" });
   }
@@ -91,9 +94,12 @@ $("btnSave").onclick = async () => {
   body.lookback_hours = Number($("lookbackHours").value) || 6;
   const tok = $("gobizToken").value.trim();
   if (tok) body.gobiz_token = tok;
+  const rtok = $("gobizRefresh").value.trim();
+  if (rtok) body.gobiz_refresh = rtok;
   try {
     await api("/api/settings", { method: "PUT", body });
     $("gobizToken").value = "";
+    $("gobizRefresh").value = "";
     show($("setupOut"), { ok: true, saved: Object.keys(body) });
     await loadSettings();
   } catch (e) {

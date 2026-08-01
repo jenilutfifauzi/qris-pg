@@ -85,6 +85,7 @@ async function handleApi(request, env, ctx) {
     return json({
       merchant_id: s.merchant_id || "",
       gobiz_token_set: tokenSet(s.gobiz_token),
+      gobiz_refresh_set: tokenSet(s.gobiz_refresh),
       // QRIS static is merchant-facing payload (sticker); still only returned to API-key holders
       qris_static: s.qris_static || "",
       qris_static_set: Boolean(s.qris_static),
@@ -106,6 +107,9 @@ async function handleApi(request, env, ctx) {
     if (body.gobiz_token != null && String(body.gobiz_token).trim()) {
       const tok = String(body.gobiz_token).replace(/^Bearer\s+/i, "").trim();
       await setSetting(env.DB, "gobiz_token", tok);
+    }
+    if (body.gobiz_refresh != null && String(body.gobiz_refresh).trim()) {
+      await setSetting(env.DB, "gobiz_refresh", String(body.gobiz_refresh).trim());
     }
     if (body.qris_static != null) {
       const q = String(body.qris_static).trim();
