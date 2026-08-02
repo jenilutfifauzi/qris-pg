@@ -13,3 +13,7 @@ worker-configuration.d.ts
 .har
 *.har
 data/
+
+# local secrets — JANGAN di-commit
+REPORT.md
+creds_report.json
