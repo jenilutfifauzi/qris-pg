@@ -61,6 +61,22 @@ function tokenSet(t) {
   return Boolean(t && String(t).length > 0);
 }
 
+// SSRF guard: callback must be public http(s), not loopback/private/link-local.
+function isSafeCallbackUrl(u) {
+  let p;
+  try {
+    p = new URL(u);
+  } catch {
+    return false;
+  }
+  if (p.protocol !== "http:" && p.protocol !== "https:") return false;
+  const h = p.hostname.toLowerCase();
+  if (h === "localhost" || h.endsWith(".localhost")) return false;
+  if (/^127\.|^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(h)) return false;
+  if (h === "::1" || h === "[::1]") return false;
+  return true;
+}
+
 function isoPlusMinutes(min) {
   return new Date(Date.now() + min * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "Z");
 }
@@ -120,10 +136,12 @@ async function handleApi(request, env, ctx) {
       }
     }
     if (body.default_callback != null) {
-      await setSetting(env.DB, "default_callback", String(body.default_callback).trim());
+      const cb = String(body.default_callback).trim();
+      if (cb && !isSafeCallbackUrl(cb)) return err("callback_url must be http(s) and not internal", 400, "INVALID_CALLBACK");
+      await setSetting(env.DB, "default_callback", cb);
     }
     if (body.lookback_hours != null) {
-      await setSetting(env.DB, "lookback_hours", String(Math.max(1, Number(body.lookback_hours) || 6)));
+      await setSetting(env.DB, "lookback_hours", String(Math.min(72, Math.max(1, Number(body.lookback_hours) || 6))));
     }
     return json({ ok: true });
   }
@@ -136,6 +154,10 @@ async function handleApi(request, env, ctx) {
   }
 
   if (method === "POST" && path === "/api/poll") {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!(await rateLimit(env.DB, `poll:${ip}`, 5))) {
+      return json({ error: "rate limit exceeded", code: "RATE_LIMITED" }, 429, { "Retry-After": "60" });
+    }
     const result = await runPoll(env);
     return json(result);
   }
@@ -155,7 +177,7 @@ async function handleApi(request, env, ctx) {
     // ponytail: 10/min/IP, bump via env var if a real merchant outgrows it
     const ip = request.headers.get("CF-Connecting-IP") || "unknown";
     if (!(await rateLimit(env.DB, `inv:${ip}`, 10))) {
-      return err("rate limit exceeded", 429, "RATE_LIMITED");
+      return json({ error: "rate limit exceeded", code: "RATE_LIMITED" }, 429, { "Retry-After": "60" });
     }
 
     const cfg = await getConfig(env.DB);
@@ -180,6 +202,9 @@ async function handleApi(request, env, ctx) {
       (body.callback_url && String(body.callback_url).trim()) ||
       cfg.defaultCallback ||
       null;
+    if (callback && !isSafeCallbackUrl(callback)) {
+      return err("callback_url must be http(s) and not internal", 400, "INVALID_CALLBACK");
+    }
 
     // retry on amount collision race (partial unique index makes dup pending amounts impossible)
     let inv = null;
@@ -271,9 +296,13 @@ export default {
 
   async scheduled(controller, env, ctx) {
     ctx.waitUntil(
-      runPoll(env).then((r) => {
-        console.log(JSON.stringify({ message: "cron poll", cron: controller.cron, ...r }));
-      })
+      runPoll(env)
+        .then((r) => {
+          console.log(JSON.stringify({ message: "cron poll", cron: controller.cron, ...r }));
+        })
+        .catch((e) => {
+          console.error(JSON.stringify({ message: "cron poll failed", error: e.message || String(e), stack: e.stack }));
+        })
     );
   },
 };

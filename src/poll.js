@@ -90,8 +90,11 @@ export async function retryUnsentCallbacks(db, secret) {
 export async function runPoll(env) {
   const db = env.DB;
   const expired = await expireOld(db);
+  // retry callbacks FIRST — must run even with zero pending invoices,
+  // otherwise a failed callback is stuck forever until a new invoice appears
+  const retried = await retryUnsentCallbacks(db, env.API_KEY);
   const pending = await listPending(db);
-  if (!pending.length) return { expired, matched: 0, pending: 0 };
+  if (!pending.length) return { expired, matched: 0, pending: 0, retried: retried.sent };
 
   const cfg = await getConfig(db);
   if (!cfg.merchantId || !cfg.token) {
@@ -195,7 +198,6 @@ export async function runPoll(env) {
     }
   }
 
-  const retried = await retryUnsentCallbacks(db, env.API_KEY);
   return { expired, matched, pending: pending.length, scanned: txs.length, retried: retried.sent, refreshed };
 }
 
