@@ -22,7 +22,7 @@
       plugins: [
         function (hook, vm) {
           hook.afterEach(function (html) {
-            return html.replace(/<pre><code class="language-mermaid">([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
+            return html.replace(/<pre[^>]*data-lang="mermaid"[^>]*><code[^>]*>([\s\S]*?)<\/code><\/pre>/g, '<div class="mermaid">$1</div>');
           });
           hook.doneEach(function () {
             if (window.mermaid && document.querySelector('.mermaid')) {
