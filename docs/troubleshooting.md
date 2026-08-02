@@ -25,7 +25,7 @@ Refresh token tidak tersedia di response API biasa — ambil dari cookie portal:
 2. DevTools → Application → Cookies → cari `refresh_token`
 3. Paste ke WebUI Setup → field **GoBiz Refresh Token** → Save
 
-Alternatif: login headless password-grant (lihat `scripts/gobiz-login.py` jika di-commit) menghasilkan pasangan `access_token` + `refresh_token` sekaligus.
+Alternatif: jalankan flow login di browser dengan proxy debugger, lalu tangkap response token dari DevTools — pasangan `access_token` + `refresh_token` keluar sekaligus di response `token`.
 
 ## Rate limit `429` dari GoBiz
 
