@@ -1,4 +1,5 @@
 import {
+  claimPollLock,
   expireOld,
   findPendingByAmount,
   getConfig,
@@ -6,10 +7,16 @@ import {
   isTxClaimed,
   listPending,
   markPaid,
-  publicInvoice,
   setSetting,
 } from "./db.js";
 import { fetchTransactions, refreshAccessToken } from "./gobiz.js";
+
+/** Callback signing secret — separate from the API auth key so a merchant who
+ * holds API_KEY cannot forge callback signatures. Falls back to API_KEY when
+ * CALLBACK_SECRET is not set (backwards compatible). */
+function callbackSecret(env) {
+  return env.CALLBACK_SECRET || env.API_KEY;
+}
 
 async function hmacSha256Hex(secret, text) {
   const key = await crypto.subtle.importKey(
@@ -74,10 +81,25 @@ export async function retryUnsentCallbacks(db, secret) {
       await db.prepare("UPDATE invoices SET callback_sent = 1 WHERE id = ?").bind(inv.id).run();
       sent++;
     } else {
-      await db
-        .prepare("UPDATE invoices SET callback_attempts = callback_attempts + 1 WHERE id = ?")
+      // RETURNING gives us the new count so we can alert exactly when a callback
+      // is permanently dropped (attempts >= 5) instead of failing silently.
+      const row = await db
+        .prepare(
+          `UPDATE invoices SET callback_attempts = callback_attempts + 1
+           WHERE id = ? RETURNING callback_attempts`
+        )
         .bind(inv.id)
-        .run();
+        .first();
+      if ((row?.callback_attempts ?? 0) >= 5) {
+        console.error(
+          JSON.stringify({
+            message: "callback give-up — no more retries",
+            id: inv.id,
+            attempts: row.callback_attempts,
+            error: r.error || `HTTP ${r.status}`,
+          })
+        );
+      }
     }
   }
   return { attempted: (results || []).length, sent };
@@ -89,10 +111,15 @@ export async function retryUnsentCallbacks(db, secret) {
  */
 export async function runPoll(env) {
   const db = env.DB;
+  // concurrency lock: cron + manual /api/poll + opportunistic GET can overlap.
+  // Lock expires automatically after 45s, so a crashed poll never wedges the loop.
+  if (!(await claimPollLock(db))) {
+    return { skipped: true, reason: "poll in progress — lock held by another poll" };
+  }
   const expired = await expireOld(db);
   // retry callbacks FIRST — must run even with zero pending invoices,
   // otherwise a failed callback is stuck forever until a new invoice appears
-  const retried = await retryUnsentCallbacks(db, env.API_KEY);
+  const retried = await retryUnsentCallbacks(db, callbackSecret(env));
   const pending = await listPending(db);
   if (!pending.length) return { expired, matched: 0, pending: 0, retried: retried.sent };
 
@@ -125,8 +152,17 @@ export async function runPoll(env) {
       }
       // cooldown: refresh token is single-use/rotating — concurrent polls
       // (cron + opportunistic) must not both consume it or the 2nd dies.
-      const lastRef = Number((await getSetting(db, "last_refresh_at")) || 0);
-      if (Date.now() - lastRef < 60_000) {
+      // Atomic claim: only ONE poll can reserve the refresh window; losers
+      // fall through to the cooldown error instead of double-refreshing.
+      const claimed = await db
+        .prepare(
+          `INSERT INTO settings (key, value) VALUES ('last_refresh_at', ?)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value
+           WHERE CAST(settings.value AS INTEGER) <= ?`
+        )
+        .bind(String(Date.now()), Date.now() - 60_000)
+        .run();
+      if ((claimed?.meta?.changes ?? 0) === 0) {
         return {
           expired,
           matched: 0,
@@ -135,7 +171,6 @@ export async function runPoll(env) {
           code: "AUTH_FAILED",
         };
       }
-      await setSetting(db, "last_refresh_at", String(Date.now()));
       try {
         const pair = await refreshAccessToken(rt);
         await setSetting(db, "gobiz_token", pair.accessToken);
@@ -192,7 +227,7 @@ export async function runPoll(env) {
         tx_id: t.transaction_id,
       })
     );
-    const cb = await sendCallback(paid, env.API_KEY);
+    const cb = await sendCallback(paid, callbackSecret(env));
     if (cb.ok) {
       await db.prepare("UPDATE invoices SET callback_sent = 1 WHERE id = ?").bind(paid.id).run();
     }
@@ -200,5 +235,3 @@ export async function runPoll(env) {
 
   return { expired, matched, pending: pending.length, scanned: txs.length, retried: retried.sent, refreshed };
 }
-
-export { publicInvoice };

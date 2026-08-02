@@ -1,3 +1,8 @@
-# Copy to .dev.vars for local wrangler dev
+# Salin ke .dev.vars untuk wrangler dev lokal
 # Generate: openssl rand -hex 24
-API_KEY=change-me-to-a-long-random-string
+API_KEY=ganti-hex-random
+# Opsional: secret terpisah utk HMAC callback (default: API_KEY)
+# CALLBACK_SECRET=ganti-hex-juga
+# Basic auth dashboard (publik-facing)
+# DASH_USER=admin
+# DASH_PASS=isi-password

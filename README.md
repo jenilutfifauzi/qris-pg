@@ -67,7 +67,8 @@ Portal → **Transaksi** → F12 Network → request `transactions` **200** → 
 
 | Apa | Di mana |
 |-----|---------|
-| `API_KEY` | `wrangler secret` / `.dev.vars` (gitignored) — auth API + secret HMAC callback |
+| `API_KEY` | `wrangler secret` / `.dev.vars` (gitignored) — auth API (fallback secret HMAC callback) |
+| `CALLBACK_SECRET` | opsional — secret HMAC callback terpisah (fallback: `API_KEY`) |
 | `DASH_USER` / `DASH_PASS` | `wrangler secret` — Basic Auth WebUI |
 | GoBiz token, merchant, QRIS | D1 via WebUI (runtime) |
 

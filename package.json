@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "wrangler dev --test-scheduled",
     "deploy": "wrangler deploy",
-    "db:local": "for f in migrations/*.sql; do wrangler d1 execute qris-pg --local --file=$f || exit 1; done",
-    "db:remote": "for f in migrations/*.sql; do wrangler d1 execute qris-pg --remote --file=$f || exit 1; done",
+    "db:local": "wrangler d1 migrations apply qris-pg --local",
+    "db:remote": "wrangler d1 migrations apply qris-pg --remote",
     "test": "node --test test/*.test.js",
     "cf-typegen": "wrangler types"
   },

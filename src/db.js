@@ -144,55 +144,92 @@ export async function expireOld(db) {
     .prepare("DELETE FROM rate_limits WHERE minute < ?")
     .bind(Math.floor(Date.now() / 60000) - 60)
     .run();
+  // retention: keep 90 days of history; never delete paid invoices with an
+  // unsent callback, and never touch non-pending rows younger than 90 days.
+  await db
+    .prepare("DELETE FROM claimed WHERE claimed_at < datetime('now', '-90 days')")
+    .run();
+  await db
+    .prepare(
+      `DELETE FROM invoices WHERE status = 'expired' AND created_at < datetime('now', '-90 days')`
+    )
+    .run();
+  await db
+    .prepare(
+      `DELETE FROM invoices WHERE status = 'paid' AND callback_sent = 1 AND created_at < datetime('now', '-90 days')`
+    )
+    .run();
   return r?.meta?.changes ?? 0;
 }
 
-/** Atomic per-key counter (window = minute). Returns false when over limit. */
+/** Claim the poll lock. Atomic upsert: succeeds only when the previous holder's
+ * timestamp is older than `ttlMs` (or the key never existed). Prevents cron +
+ * manual + opportunistic polls from double-fetching GoBiz concurrently. */
+export async function claimPollLock(db, ttlMs = 45_000) {
+  const now = Date.now();
+  const r = await db
+    .prepare(
+      `INSERT INTO settings (key, value) VALUES ('poll_lock', ?)
+       ON CONFLICT(key) DO UPDATE SET value = excluded.value
+       WHERE CAST(settings.value AS INTEGER) <= ?`
+    )
+    .bind(String(now), now - ttlMs)
+    .run();
+  return (r?.meta?.changes ?? 0) > 0;
+}
+
+/** Atomic per-key counter (window = minute). Returns false when over limit.
+ * Single statement via RETURNING — no check-then-act race between concurrent requests. */
 export async function rateLimit(db, key, limit) {
   const minute = Math.floor(Date.now() / 60000);
-  await db
+  const row = await db
     .prepare(
       `INSERT INTO rate_limits (key, minute, count) VALUES (?, ?, 1)
        ON CONFLICT(key) DO UPDATE SET
          minute = excluded.minute,
-         count = CASE WHEN minute = excluded.minute THEN count + 1 ELSE 1 END`
+         count = CASE WHEN minute = excluded.minute THEN count + 1 ELSE 1 END
+       RETURNING count`
     )
     .bind(key, minute)
-    .run();
-  const row = await db.prepare("SELECT count FROM rate_limits WHERE key = ?").bind(key).first();
-  return (row?.count ?? 0) <= limit;
+    .first();
+  return (row?.count ?? 1) <= limit;
 }
 
-/** Mark paid once; returns invoice or null if already claimed/paid/expired. */
+/** Mark paid once; returns invoice or null if already claimed/paid/expired.
+ *
+ * Atomic via db.batch (D1 runs the batch in an implicit transaction):
+ *  1. claim insert is conditional — the SELECT only yields a row while the
+ *     invoice is still 'pending', so an expired/paid invoice claims nothing;
+ *  2. if the tx_id is already claimed, the INSERT hits the PK constraint and
+ *     the whole batch rolls back (the UPDATE is never applied);
+ *  3. a worker crash mid-poll either commits both statements or neither.
+ * No orphan claimed rows, no burned tx_ids, no double-paid invoices.
+ */
 export async function markPaid(db, invoiceId, txId) {
   const inv = await getInvoice(db, invoiceId);
   if (!inv || inv.status !== "pending") return null;
 
   try {
-    await db
-      .prepare("INSERT INTO claimed (tx_id, invoice_id, amount) VALUES (?, ?, ?)")
-      .bind(txId, invoiceId, inv.amount)
-      .run();
+    const [, upd] = await db.batch([
+      db
+        .prepare(
+          `INSERT INTO claimed (tx_id, invoice_id, amount)
+           SELECT ?, ?, amount FROM invoices WHERE id = ? AND status = 'pending'`
+        )
+        .bind(txId, invoiceId, invoiceId),
+      db
+        .prepare(
+          `UPDATE invoices
+           SET status = 'paid', paid_at = datetime('now'), tx_id = ?, callback_sent = ?
+           WHERE id = ? AND status = 'pending'`
+        )
+        .bind(txId, inv.callback_url ? 0 : 1, invoiceId),
+    ]);
+    // changes = 0 → invoice expired/paid concurrently: nothing was persisted
+    // (claim insert is conditional on status='pending'), tx_id stays reusable.
+    if ((upd?.meta?.changes ?? 0) === 0) return null;
   } catch {
-    return null; // tx already claimed
-  }
-
-  const upd = await db
-    .prepare(
-      `UPDATE invoices
-       SET status = 'paid', paid_at = datetime('now'), tx_id = ?, callback_sent = ?
-       WHERE id = ? AND status = 'pending'`
-    )
-    .bind(txId, inv.callback_url ? 0 : 1, invoiceId)
-    .run();
-
-  // race guard: invoice may have expired/been paid by a concurrent poll while
-  // fetchTransactions was in flight → UPDATE changed 0 rows. Roll back the claim
-  // so the tx_id stays reusable; otherwise the caller would get a truthy (expired)
-  // invoice → fake "paid" callback + a permanently orphaned claimed row.
-  if ((upd?.meta?.changes ?? 0) === 0) {
-    await db.prepare("DELETE FROM claimed WHERE tx_id = ?").bind(txId).run();
-    return null;
+    return null; // tx already claimed → batch rolled back atomically
   }
 
   return getInvoice(db, invoiceId);

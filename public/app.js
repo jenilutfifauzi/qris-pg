@@ -144,7 +144,16 @@ $("btnCreate").onclick = async () => {
     $("resUnique").textContent = inv.unique_code ? `(+${inv.unique_code} unik)` : "";
     $("resStatus").textContent = inv.status;
     $("resExp").textContent = inv.expires_at;
-    $("resQr").src = inv.qr_url;
+    // QR dirender lokal dari payload — tidak mengirim data QRIS ke service pihak ketiga
+    if (typeof qrcode === "function") {
+      const qr = qrcode(0, "M");
+      qr.addData(inv.qris_payload);
+      qr.make();
+      $("resQr").src = qr.createDataURL(8, 4);
+      $("resQr").hidden = false;
+    } else {
+      $("resQr").hidden = true; // CDN lib gagal dimuat — QR tidak bisa dirender lokal
+    }
     $("resPayload").textContent = inv.qris_payload;
     $("createResult").hidden = false;
     show($("createOut"), inv);

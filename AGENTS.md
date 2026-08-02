@@ -9,7 +9,7 @@ Merges ideas from:
 
 ## Stack
 - Worker `src/index.js` (fetch + scheduled)
-- D1 `env.DB` · migration `migrations/0001_init.sql`
+- D1 `env.DB` · migration `migrations/` (0001–0004, via `wrangler d1 migrations apply`)
 - Assets `public/` · API key `env.API_KEY` (secret)
 - Cron `* * * * *` → `runPoll`
 

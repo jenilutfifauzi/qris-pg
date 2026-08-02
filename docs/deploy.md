@@ -49,7 +49,8 @@ openssl rand -base64 18 | npx wrangler secret put DASH_PASS
 
 | Secret | Fungsi |
 |---|---|
-| `API_KEY` | Auth semua endpoint API + secret HMAC callback |
+| `API_KEY` | Auth semua endpoint API + fallback secret HMAC callback |
+| `CALLBACK_SECRET` | opsional — secret HMAC callback terpisah dari `API_KEY` (`wrangler secret put CALLBACK_SECRET`) |
 | `DASH_USER` | Basic Auth dashboard WebUI |
 | `DASH_PASS` | Basic Auth dashboard WebUI |
 

@@ -37,9 +37,8 @@ function json(data, status = 200, extra = {}) {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Headers": "Content-Type,X-API-Key,Authorization",
-      "Access-Control-Allow-Methods": "GET,POST,PUT,OPTIONS",
+      // No CORS headers on purpose: the dashboard is same-origin (served by this
+      // worker's assets), so wildcard ACAO would only open responses to any site.
       ...extra,
     },
   });
@@ -190,13 +189,9 @@ async function handleApi(request, env, ctx) {
     const merchantRef = body.merchant_ref ? String(body.merchant_ref).slice(0, 128) : null;
     const existing = await findPendingByRef(env.DB, merchantRef);
     if (existing) {
-      return json(
-        {
-          ...publicInvoice(existing),
-          qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(existing.qris_payload)}`,
-        },
-        201
-      );
+      // no qr_url on purpose — QR dirender client-side dari qris_payload
+      // (payload QRIS tidak dikirim ke service pihak ketiga manapun)
+      return json(publicInvoice(existing), 201);
     }
 
     // clamp: 1 min … 24h (no unbounded pending invoices)
@@ -239,24 +234,12 @@ async function handleApi(request, env, ctx) {
       // concurrent create may have won the merchant_ref race (unique partial index)
       const winner = await findPendingByRef(env.DB, merchantRef);
       if (winner) {
-        return json(
-          {
-            ...publicInvoice(winner),
-            qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(winner.qris_payload)}`,
-          },
-          201
-        );
+        return json(publicInvoice(winner), 201);
       }
       return err("unique amount exhausted — try again", 409, "AMOUNT_EXHAUSTED");
     }
 
-    return json(
-      {
-        ...publicInvoice(inv),
-        qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(inv.qris_payload)}`,
-      },
-      201
-    );
+    return json(publicInvoice(inv), 201);
   }
 
   if (method === "GET" && path === "/api/invoices") {

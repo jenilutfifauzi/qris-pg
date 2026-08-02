@@ -57,14 +57,12 @@ describe("rateLimit", () => {
             this.args = args;
             return this;
           },
-          async run() {
-            const k = this.args[0];
-            store.set(k, (store.get(k) || 0) + 1);
-            return {};
-          },
+          // single-statement semantics: first() does the atomic upsert + returns count
           async first() {
             const k = this.args[0];
-            return store.has(k) ? { count: store.get(k) } : null;
+            const next = (store.get(k) || 0) + 1;
+            store.set(k, next);
+            return { count: next };
           },
         };
       },
@@ -118,6 +116,11 @@ describe("callback", () => {
           async run() {
             sql.push(q);
             return {};
+          },
+          async first() {
+            // RETURNING callback_attempts — keep it below 5 so no give-up log fires
+            sql.push(q);
+            return { callback_attempts: 1 };
           },
         };
       },

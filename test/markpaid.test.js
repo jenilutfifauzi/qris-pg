@@ -36,6 +36,7 @@ function makeDb() {
     prepare(sql) {
       const stmt = db.prepare(sql);
       return {
+        _sql: sql,
         bind(...args) {
           this.args = args;
           return this;
@@ -56,6 +57,24 @@ function makeDb() {
         },
       };
     },
+    // D1-style atomic batch: runs in an implicit transaction; a failing
+    // statement rolls the whole batch back (same semantics as D1 batch()).
+    async batch(stmts) {
+      db.exec("BEGIN");
+      try {
+        const out = [];
+        for (const s of stmts) {
+          const stmt = db.prepare(s._sql);
+          const r = stmt.run(...(s.args || []));
+          out.push({ meta: { changes: r.changes }, results: [] });
+        }
+        db.exec("COMMIT");
+        return out;
+      } catch (e) {
+        db.exec("ROLLBACK");
+        throw e;
+      }
+    },
     close: () => db.close(),
   };
 }
@@ -69,31 +88,8 @@ function seedPending(db, id = "inv1", amount = 5000) {
 }
 
 // wrapper that fakes a concurrent expireOld: invoice UPDATE touches 0 rows
-function expiredDb(real) {
-  return {
-    prepare(sql) {
-      const inner = real.prepare(sql);
-      return {
-        bind(...args) {
-          this.args = args;
-          return this;
-        },
-        run() {
-          if (sql.trimStart().startsWith("UPDATE invoices")) {
-            return { meta: { changes: 0 } }; // simulate: invoice expired mid-flight
-          }
-          return inner.run(...(this.args || []));
-        },
-        first() {
-          return inner.first(...(this.args || []));
-        },
-        all() {
-          return inner.all(...(this.args || []));
-        },
-      };
-    },
-  };
-}
+// (retired — the atomic CTE makes the status check part of the same statement;
+//  the race is now tested by actually expiring the invoice before markPaid)
 
 describe("markPaid", () => {
   it("marks pending invoice paid and records the claim", async () => {
@@ -119,17 +115,36 @@ describe("markPaid", () => {
     db.close();
   });
 
-  it("rolls back the claim when UPDATE changes 0 rows (invoice expired concurrently)", async () => {
+  it("returns null when invoice expired concurrently — no orphan claim row (atomic)", async () => {
     const db = makeDb();
     seedPending(db);
-    const racy = expiredDb(db);
-    const inv = await markPaid(racy, "inv1", "TX-2");
-    assert.equal(inv, null, "must not return an expired/truthy invoice");
-    // rollback: claimed row deleted, invoice stays pending
+    // simulate expireOld winning the race: invoice already expired before markPaid
+    db.prepare("UPDATE invoices SET status = 'expired' WHERE id = 'inv1'").run();
+    const inv = await markPaid(db, "inv1", "TX-2");
+    assert.equal(inv, null, "must not return a truthy invoice");
+    // atomicity: the claim insert is conditional on status='pending', so
+    // nothing was persisted — tx_id stays reusable, no orphan row.
     const claimed = db.prepare("SELECT COUNT(*) AS n FROM claimed").raw().get();
-    assert.equal(claimed.n, 0, "claimed row must be rolled back");
+    assert.equal(claimed.n, 0, "claimed row must not exist for expired invoice");
     const invRow = db.prepare("SELECT status FROM invoices WHERE id = 'inv1'").raw().get();
-    assert.equal(invRow.status, "pending");
+    assert.equal(invRow.status, "expired");
+    db.close();
+  });
+
+  it("leaves tx_id reusable after an expired-invoice attempt (atomic)", async () => {
+    const db = makeDb();
+    seedPending(db, "invA");
+    seedPending(db, "invB", 9000);
+    // invA expired first → markPaid on invA returns null and claims nothing
+    db.prepare("UPDATE invoices SET status = 'expired' WHERE id = 'invA'").run();
+    const a = await markPaid(db, "invA", "TX-RE");
+    assert.equal(a, null);
+    // same tx_id can still pay invB — nothing was burned by the failed attempt
+    const b = await markPaid(db, "invB", "TX-RE");
+    assert.ok(b, "tx_id must remain reusable after the expired attempt");
+    assert.equal(b.status, "paid");
+    const claimed = db.prepare("SELECT COUNT(*) AS n FROM claimed").raw().get();
+    assert.equal(claimed.n, 1);
     db.close();
   });
 

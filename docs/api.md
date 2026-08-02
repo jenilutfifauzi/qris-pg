@@ -55,13 +55,14 @@ Response `201`:
   "unique_code": 5,
   "status": "pending",
   "qris_payload": "00020101021126610014COM.GO-JEK...6304F73A",
-  "qr_url": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=...",
   "expires_at": "2026-08-02T04:00:00Z"
 }
 ```
 
 > [!NOTE]
-> `qr_url` dirender oleh layanan pihak ketiga **api.qrserver.com** — hanya berisi payload QRIS (bukan data sensitif). Jika layanan tersebut down, QR tetap bisa dihasilkan dari `qris_payload` secara lokal.
+> Tidak ada `qr_url` di response — QR dirender **lokal di client** dari `qris_payload`
+> (dashboard memakai qrcode-generator via CDN). Payload QRIS tidak pernah dikirim
+> ke layanan pihak ketiga manapun.
 
 ## Cek status
 

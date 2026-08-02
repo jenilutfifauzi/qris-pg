@@ -53,7 +53,10 @@ export async function fetchTransactions(opts) {
     from: "0",
     size: String(opts.size ?? 30),
     statuses: "SETTLEMENT,CAPTURE,REFUND,PARTIAL_REFUND",
-    payment_types: "QRIS,GOPAY,OFFLINE_CREDIT_CARD,OFFLINE_DEBIT_CARD,CREDIT_CARD",
+    // QRIS kit — only QRIS/GOPAY txns are ever matched against invoices.
+    // Pulling card txns risks unit mismatches (gross_amount in cents vs IDR)
+    // and adds noise to the matcher.
+    payment_types: "QRIS,GOPAY",
     start_time: startPadded.toISOString(),
     end_time: now.toISOString(),
     merchant_ids: merchantId,
