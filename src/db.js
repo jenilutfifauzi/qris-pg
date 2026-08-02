@@ -36,17 +36,17 @@ export async function getConfig(db) {
 /** Allocate unique amount: base, base+1, ... among active pending. */
 export async function allocateUniqueAmount(db, baseAmount) {
   const base = Math.floor(baseAmount);
+  const { results } = await db
+    .prepare(
+      `SELECT amount FROM invoices
+       WHERE status = 'pending' AND amount BETWEEN ? AND ?
+         AND datetime(expires_at) > datetime('now')`
+    )
+    .bind(base, base + 199)
+    .all();
+  const taken = new Set((results || []).map((r) => r.amount));
   for (let i = 0; i < 200; i++) {
-    const amt = base + i;
-    const clash = await db
-      .prepare(
-        `SELECT 1 AS x FROM invoices
-         WHERE amount = ? AND status = 'pending'
-           AND datetime(expires_at) > datetime('now')`
-      )
-      .bind(amt)
-      .first();
-    if (!clash) return { amount: amt, uniqueCode: i };
+    if (!taken.has(base + i)) return { amount: base + i, uniqueCode: i };
   }
   // ponytail: rare collision path — random offset
   const extra = 100 + Math.floor(Math.random() * 900);
@@ -153,7 +153,9 @@ export async function rateLimit(db, key, limit) {
   await db
     .prepare(
       `INSERT INTO rate_limits (key, minute, count) VALUES (?, ?, 1)
-       ON CONFLICT(key) DO UPDATE SET count = count + 1, minute = excluded.minute`
+       ON CONFLICT(key) DO UPDATE SET
+         minute = excluded.minute,
+         count = CASE WHEN minute = excluded.minute THEN count + 1 ELSE 1 END`
     )
     .bind(key, minute)
     .run();

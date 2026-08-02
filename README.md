@@ -89,9 +89,11 @@ curl -s https://YOUR.workers.dev/api/invoices \
 curl -s https://YOUR.workers.dev/api/invoices/ID -H "X-API-Key: $API_KEY"
 ```
 
-Callback saat lunas: `POST` ke `callback_url` → `{ id, merchant_ref, amount, status, tx_id, paid_at, unique_code }`
+Callback saat lunas: `POST` ke `callback_url` → `{ id, merchant_ref, amount, status, tx_id, paid_at, unique_code }` dengan header `Idempotency-Key: <tx_id>`.
 
 Header `X-Qris-Signature: sha256=<hex>` = HMAC-SHA256(raw body, `API_KEY`) — verify di sisi penerima webhook (mis. `createHmac('sha256', process.env.QRIS_API_KEY).update(rawBody).digest('hex')`). Idempotensi: POST dengan `merchant_ref` yang masih `pending` → return invoice yang sama.
+
+> ⚠️ **Callback at-least-once** — dalam kondisi crash worker, callback bisa terkirim **lebih dari sekali**. Wajib dedup di sisi penerima pakai `tx_id` / `Idempotency-Key` (simpan tx_id yang sudah diproses, ignore duplikat). Jangan pernah memproses callback dua kali (risiko double-fulfillment).
 
 > 📖 Referensi lengkap: **[API & Callback](https://jenilutfifauzi.github.io/qris-pg/#/api)** · **[DB Schema](https://jenilutfifauzi.github.io/qris-pg/#/api?id=skema-database)**
 

@@ -173,7 +173,8 @@ async function handleApi(request, env, ctx) {
       );
     }
 
-    const expireMin = Math.max(1, Number(body.expire_min ?? env.DEFAULT_EXPIRE_MIN ?? 30));
+    // clamp: 1 min … 24h (no unbounded pending invoices)
+    const expireMin = Math.min(1440, Math.max(1, Number(body.expire_min ?? env.DEFAULT_EXPIRE_MIN ?? 30)));
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const callback =
       (body.callback_url && String(body.callback_url).trim()) ||

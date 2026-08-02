@@ -46,6 +46,8 @@ export async function sendCallback(invoice, secret) {
       headers: {
         "Content-Type": "application/json",
         "User-Agent": "qris-pg/1.0",
+        // idempotency: consumer MUST dedup by tx_id (double-fire possible on worker crash)
+        "Idempotency-Key": invoice.tx_id || invoice.id,
         ...(sig ? { "X-Qris-Signature": `sha256=${sig}` } : {}),
       },
       body: raw,
@@ -118,6 +120,19 @@ export async function runPoll(env) {
           code: "AUTH_FAILED",
         };
       }
+      // cooldown: refresh token is single-use/rotating — concurrent polls
+      // (cron + opportunistic) must not both consume it or the 2nd dies.
+      const lastRef = Number((await getSetting(db, "last_refresh_at")) || 0);
+      if (Date.now() - lastRef < 60_000) {
+        return {
+          expired,
+          matched: 0,
+          pending: pending.length,
+          error: "AUTH_FAILED — refresh in cooldown (concurrent poll?), retry next minute",
+          code: "AUTH_FAILED",
+        };
+      }
+      await setSetting(db, "last_refresh_at", String(Date.now()));
       try {
         const pair = await refreshAccessToken(rt);
         await setSetting(db, "gobiz_token", pair.accessToken);
@@ -155,6 +170,8 @@ export async function runPoll(env) {
   let matched = 0;
   for (const t of txs) {
     if (!t.transaction_id || !t.amount) continue;
+    // only forward payments settle invoices — refunds must never match a pending invoice
+    if (t.status && t.status !== "SETTLEMENT" && t.status !== "CAPTURE") continue;
     if (await isTxClaimed(db, t.transaction_id)) continue;
 
     const inv = await findPendingByAmount(db, t.amount);
