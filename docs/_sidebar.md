@@ -1,2 +1,5 @@
 * [Home](/)
 * [API & Callback](/api)
+* [Deploy](/deploy)
+* [Troubleshooting](/troubleshooting)
+* [Changelog](/changelog)
