@@ -20,3 +20,4 @@ creds_report.json
 
 # plan/goal files — jangan pernah di-push
 /goals/
+/.hermes/
