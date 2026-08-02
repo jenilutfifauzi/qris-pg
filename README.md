@@ -33,7 +33,7 @@ Bukan webhook Gojek — kit ini yang melakukan polling.
 
 ## Quickstart
 
-Butuh: Node 18+, akun Cloudflare, merchant GoBiz.
+Butuh: Node 22+ (test pakai `node:sqlite`), akun Cloudflare, merchant GoBiz.
 
 ```bash
 git clone https://github.com/jenilutfifauzi/qris-pg.git

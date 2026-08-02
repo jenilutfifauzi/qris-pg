@@ -147,6 +147,10 @@ async function handleApi(request, env, ctx) {
   }
 
   if (method === "POST" && path === "/api/test-connection") {
+    const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+    if (!(await rateLimit(env.DB, `test:${ip}`, 5))) {
+      return json({ error: "rate limit exceeded", code: "RATE_LIMITED" }, 429, { "Retry-After": "60" });
+    }
     const cfg = await getConfig(env.DB);
     if (!cfg.merchantId || !cfg.token) return err("set merchant_id + gobiz_token first", 400, "NOT_CONFIGURED");
     const result = await testConnection({ merchantId: cfg.merchantId, token: cfg.token });
@@ -231,7 +235,20 @@ async function handleApi(request, env, ctx) {
         if (!/unique/i.test(String(e.message || ""))) throw e;
       }
     }
-    if (!inv) return err("unique amount exhausted — try again", 409, "AMOUNT_EXHAUSTED");
+    if (!inv) {
+      // concurrent create may have won the merchant_ref race (unique partial index)
+      const winner = await findPendingByRef(env.DB, merchantRef);
+      if (winner) {
+        return json(
+          {
+            ...publicInvoice(winner),
+            qr_url: `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(winner.qris_payload)}`,
+          },
+          201
+        );
+      }
+      return err("unique amount exhausted — try again", 409, "AMOUNT_EXHAUSTED");
+    }
 
     return json(
       {

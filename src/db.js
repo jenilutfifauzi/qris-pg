@@ -163,7 +163,7 @@ export async function rateLimit(db, key, limit) {
   return (row?.count ?? 0) <= limit;
 }
 
-/** Mark paid once; returns invoice or null if already claimed/paid. */
+/** Mark paid once; returns invoice or null if already claimed/paid/expired. */
 export async function markPaid(db, invoiceId, txId) {
   const inv = await getInvoice(db, invoiceId);
   if (!inv || inv.status !== "pending") return null;
@@ -177,7 +177,7 @@ export async function markPaid(db, invoiceId, txId) {
     return null; // tx already claimed
   }
 
-  await db
+  const upd = await db
     .prepare(
       `UPDATE invoices
        SET status = 'paid', paid_at = datetime('now'), tx_id = ?, callback_sent = ?
@@ -185,6 +185,15 @@ export async function markPaid(db, invoiceId, txId) {
     )
     .bind(txId, inv.callback_url ? 0 : 1, invoiceId)
     .run();
+
+  // race guard: invoice may have expired/been paid by a concurrent poll while
+  // fetchTransactions was in flight → UPDATE changed 0 rows. Roll back the claim
+  // so the tx_id stays reusable; otherwise the caller would get a truthy (expired)
+  // invoice → fake "paid" callback + a permanently orphaned claimed row.
+  if ((upd?.meta?.changes ?? 0) === 0) {
+    await db.prepare("DELETE FROM claimed WHERE tx_id = ?").bind(txId).run();
+    return null;
+  }
 
   return getInvoice(db, invoiceId);
 }
