@@ -3,89 +3,364 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>qris-pg</title>
+  <meta name="color-scheme" content="light" />
+  <title>qris-pg · Dashboard</title>
   <link rel="stylesheet" href="/style.css" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M8 21l4-8 4 5 4-7 4 10z' fill='white'/%3E%3C/svg%3E" />
 </head>
 <body>
-  <header>
-    <h1>qris-pg</h1>
-    <p class="muted">QRIS payment kit · Workers</p>
-  </header>
+  <!-- Icon sprite (Lucide-style inline SVG — zero dependency, tetap kompatibel dengan CF Workers) -->
+  <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+    <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+    <symbol id="i-qr" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M17 21h4v-4"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></symbol>
+    <symbol id="i-zap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+    <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3z"/></symbol>
+    <symbol id="i-store" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.4-4.4a2 2 0 0 1 2.8 0L12 5l2.8-2.4a2 2 0 0 1 2.8 0L22 7"/><path d="M4 7v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7"/><path d="M9 21v-6h6v6"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.9 4.2A9.9 9.9 0 0 1 12 4c6.5 0 10 7 10 7a13.2 13.2 0 0 1-2.7 3.9"/><path d="M6.6 6.6A13.3 13.3 0 0 0 2 11s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/><path d="M9.5 9.5a3 3 0 0 0 4.2 4.2"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="i-chevron-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></symbol>
+    <symbol id="i-out" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4"/><path d="M12 16h.01"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4"/><path d="M12 8h.01"/></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-hash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+    <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-6 8-6s8 2 8 6"/></symbol>
+    <symbol id="i-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></symbol>
+  </svg>
 
-  <nav>
-    <button type="button" data-tab="setup" class="active">Setup</button>
-    <button type="button" data-tab="create">Create</button>
-    <button type="button" data-tab="list">Invoices</button>
-  </nav>
+  <div class="app">
+    <!-- ═══ Sidebar ═══ -->
+    <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
+      <div class="sidebar-top">
+        <a class="brand" href="#" data-tab="setup" aria-label="qris-pg dashboard">
+          <span class="brand-logo"><svg><use href="#i-wallet"/></svg></span>
+          <span class="brand-text">
+            <strong>qris-pg</strong>
+            <small>Payment Gateway</small>
+          </span>
+        </a>
 
-  <main>
-    <section id="tab-setup" class="tab active">
-      <h2>Setup</h2>
-      <label>API Key <input id="apiKey" type="password" autocomplete="off" placeholder="sama dengan wrangler secret" /></label>
-      <p class="hint">Disimpan di localStorage browser. Diperlukan untuk semua aksi.</p>
-
-      <label>Merchant ID <input id="merchantId" placeholder="G219154081" /></label>
-      <label>Access Token (Bearer) <textarea id="gobizToken" rows="3" placeholder="paste Bearer dari Network portal (kosongkan jika tidak ganti)"></textarea></label>
-      <label>GoBiz Refresh Token <textarea id="gobizRefresh" rows="3" placeholder="dari cookie refresh_token portal — dipakai auto-refresh saat token expired (kosongkan jika tidak ganti)"></textarea></label>
-      <label>QRIS Static payload <textarea id="qrisStatic" rows="4" placeholder="000201010211..."></textarea></label>
-      <label>Default callback URL <input id="defaultCallback" type="url" placeholder="https://your.app/webhook" /></label>
-      <label>Lookback jam <input id="lookbackHours" type="number" min="1" max="72" value="6" /></label>
-
-      <div class="row">
-        <button type="button" id="btnSave">Save</button>
-        <button type="button" id="btnTest" class="secondary">Test mutasi</button>
-        <button type="button" id="btnPoll" class="secondary">Poll now</button>
+        <nav class="side-nav">
+          <button type="button" class="side-item active" data-tab="setup">
+            <svg><use href="#i-grid"/></svg><span>Dashboard</span>
+          </button>
+          <button type="button" class="side-item" data-tab="create">
+            <svg><use href="#i-qr"/></svg><span>Buat Invoice</span>
+          </button>
+          <button type="button" class="side-item" data-tab="list">
+            <svg><use href="#i-list"/></svg><span>Invoices</span>
+            <span class="side-badge" id="navPending" hidden>0</span>
+          </button>
+        </nav>
       </div>
-      <pre id="setupOut" class="out"></pre>
-    </section>
 
-    <section id="tab-create" class="tab">
-      <h2>Create invoice</h2>
-      <label>Amount (IDR base) <input id="amount" type="number" min="1" value="5000" /></label>
-      <label>Merchant ref <input id="merchantRef" placeholder="ORDER-123" /></label>
-      <label>Expire (menit) <input id="expireMin" type="number" min="1" value="30" /></label>
-      <label>Callback URL (opsional) <input id="callbackUrl" type="url" placeholder="override default" /></label>
-      <button type="button" id="btnCreate">Create</button>
-      <div id="createResult" hidden>
-        <p><strong>ID:</strong> <code id="resId"></code></p>
-        <p><strong>Bayar:</strong> <span id="resAmount"></span> <span class="muted" id="resUnique"></span></p>
-        <p><strong>Status:</strong> <span id="resStatus"></span> · exp <span id="resExp"></span></p>
-        <img id="resQr" alt="QRIS" width="280" height="280" />
-        <details><summary>Payload</summary><pre id="resPayload" class="out"></pre></details>
+      <div class="sidebar-bottom">
+        <div class="conn-state" id="connState">
+          <span class="dot dot-idle" id="connDot"></span>
+          <div class="conn-text">
+            <strong id="connLabel">Memeriksa koneksi…</strong>
+            <small id="connDetail">cron tiap menit</small>
+          </div>
+        </div>
+        <div class="side-foot">
+          <span class="ver">v1.1.0</span>
+          <span class="ver-muted">unofficial · personal use</span>
+        </div>
       </div>
-      <pre id="createOut" class="out"></pre>
-    </section>
+    </aside>
 
-    <section id="tab-list" class="tab">
-      <h2>Invoices</h2>
-      <div class="row">
-        <select id="filterStatus">
-          <option value="">all</option>
-          <option value="pending">pending</option>
-          <option value="paid">paid</option>
-          <option value="expired">expired</option>
-        </select>
-        <button type="button" id="btnRefresh" class="secondary">Refresh</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Ref</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>Created</th>
-            </tr>
-          </thead>
-          <tbody id="invBody"></tbody>
-        </table>
-      </div>
-      <pre id="listOut" class="out"></pre>
-    </section>
-  </main>
+    <div class="scrim" id="scrim" hidden></div>
 
-  <footer class="muted">Unofficial · personal use · mutasi via GoBiz poll</footer>
+    <!-- ═══ Main ═══ -->
+    <div class="main">
+      <header class="topbar">
+        <button type="button" class="icon-btn menu-btn" id="btnMenu" aria-label="Buka menu"><svg><use href="#i-menu"/></svg></button>
+        <div class="crumb">
+          <h1 id="pageTitle">Dashboard</h1>
+          <p id="pageSub">Ringkasan status gateway QRIS</p>
+        </div>
+        <div class="topbar-right">
+          <div class="search-box" id="searchBox">
+            <svg><use href="#i-search"/></svg>
+            <input id="searchInput" type="search" placeholder="Cari invoice…" aria-label="Cari invoice" autocomplete="off" />
+          </div>
+          <div class="dd" id="bellWrap">
+            <button type="button" class="icon-btn" id="btnBell" aria-label="Notifikasi"><svg><use href="#i-bell"/></svg><span class="dot dot-alert" hidden></span></button>
+            <div class="dd-menu dd-right" id="bellMenu" hidden></div>
+          </div>
+          <div class="dd" id="userWrap">
+            <button type="button" class="user-chip" id="btnUser" aria-label="Menu profil">
+              <span class="avatar"><svg><use href="#i-user"/></svg></span>
+              <span class="user-meta"><strong id="userName">admin</strong><small id="userRole">merchant</small></span>
+              <svg class="caret"><use href="#i-chevron"/></svg>
+            </button>
+            <div class="dd-menu dd-right" id="userMenu" hidden>
+              <button type="button" data-act="reload"><svg><use href="#i-refresh"/></svg>Reload data</button>
+              <button type="button" data-act="clear"><svg><use href="#i-out"/></svg>Keluar (hapus API key)</button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="content">
+        <!-- ═══ Tab: Dashboard / Setup ═══ -->
+        <section id="tab-setup" class="tab active">
+          <div class="stat-grid" id="statSetup"></div>
+
+          <div class="card">
+            <div class="card-head">
+              <div>
+                <h2>Konfigurasi merchant</h2>
+                <p>Token & payload tersimpan di D1 — kosongkan field yang tidak ingin diubah.</p>
+              </div>
+              <span class="badge badge-soft" id="cfgBadge">belum disimpan</span>
+            </div>
+
+            <div class="card-body">
+              <div class="field">
+                <label for="apiKey">API Key <span class="req">*</span></label>
+                <div class="input-wrap">
+                  <svg class="input-ico"><use href="#i-key"/></svg>
+                  <input id="apiKey" type="password" autocomplete="off" placeholder="sama dengan wrangler secret" />
+                  <button type="button" class="input-act" id="btnEye" aria-label="Tampilkan API key"><svg><use href="#i-eye"/></svg></button>
+                </div>
+                <p class="hint">Disimpan di localStorage browser. Diperlukan untuk semua aksi API.</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="merchantId">Merchant ID</label>
+                  <div class="input-wrap">
+                    <svg class="input-ico"><use href="#i-store"/></svg>
+                    <input id="merchantId" placeholder="G219154081" autocomplete="off" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="lookbackHours">Lookback polling (jam)</label>
+                  <div class="input-wrap">
+                    <svg class="input-ico"><use href="#i-clock"/></svg>
+                    <input id="lookbackHours" type="number" min="1" max="72" value="6" />
+                  </div>
+                  <p class="hint">1–72 jam; mutasi GoBiz diambil mundur dari sekarang.</p>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="defaultCallback">Default callback URL</label>
+                <div class="input-wrap">
+                  <svg class="input-ico"><use href="#i-activity"/></svg>
+                  <input id="defaultCallback" type="url" placeholder="https://your.app/webhook" autocomplete="off" />
+                </div>
+                <p class="hint">Webhook menerima POST HMAC-SHA256 (header <code>X-Qris-Signature</code>).</p>
+              </div>
+
+              <div class="form-grid">
+                <div class="field">
+                  <label for="gobizToken">Access Token (Bearer)</label>
+                  <textarea id="gobizToken" rows="3" placeholder="paste Bearer dari Network portal (kosongkan jika tidak ganti)" spellcheck="false"></textarea>
+                </div>
+                <div class="field">
+                  <label for="gobizRefresh">GoBiz Refresh Token</label>
+                  <textarea id="gobizRefresh" rows="3" placeholder="dari cookie refresh_token portal — dipakai auto-refresh saat token expired (kosongkan jika tidak ganti)" spellcheck="false"></textarea>
+                  <p class="hint">Rotating / single-use — jangan test-refresh token yang sama berulang kali.</p>
+                </div>
+              </div>
+
+              <div class="field">
+                <label for="qrisStatic">QRIS Static payload</label>
+                <textarea id="qrisStatic" rows="4" placeholder="000201010211…" spellcheck="false"></textarea>
+                <p class="hint">Payload sticker QRIS statis; diubah jadi dinamis (amount + kode unik) per invoice.</p>
+              </div>
+
+              <div class="actions">
+                <button type="button" class="btn btn-primary" id="btnSave"><svg><use href="#i-check"/></svg>Simpan konfigurasi</button>
+                <button type="button" class="btn btn-soft" id="btnTest"><svg><use href="#i-zap"/></svg>Test mutasi</button>
+                <button type="button" class="btn btn-ghost" id="btnPoll"><svg><use href="#i-refresh"/></svg>Poll sekarang</button>
+              </div>
+
+              <details class="dbg" id="setupDbg" hidden>
+                <summary>Debug JSON</summary>
+                <pre id="setupOut"></pre>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ Tab: Buat Invoice ═══ -->
+        <section id="tab-create" class="tab">
+          <div class="create-grid">
+            <div class="card">
+              <div class="card-head">
+                <div>
+                  <h2>Invoice baru</h2>
+                  <p>Amount otomatis ditambah kode unik agar tidak tabrakan antar invoice.</p>
+                </div>
+              </div>
+              <div class="card-body">
+                <div class="field">
+                  <label for="amount">Amount (IDR)</label>
+                  <div class="input-wrap">
+                    <span class="prefix">Rp</span>
+                    <input id="amount" type="number" min="1" value="5000" />
+                  </div>
+                </div>
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="merchantRef">Merchant ref</label>
+                    <input id="merchantRef" placeholder="ORDER-123" autocomplete="off" />
+                    <p class="hint">Idempoten: ref sama & masih pending → invoice sama.</p>
+                  </div>
+                  <div class="field">
+                    <label for="expireMin">Expire (menit)</label>
+                    <input id="expireMin" type="number" min="1" value="30" />
+                    <p class="hint">1–1440 menit (maks 24 jam).</p>
+                  </div>
+                </div>
+                <div class="field">
+                  <label for="callbackUrl">Callback URL (opsional)</label>
+                  <div class="input-wrap">
+                    <svg class="input-ico"><use href="#i-activity"/></svg>
+                    <input id="callbackUrl" type="url" placeholder="override default" autocomplete="off" />
+                  </div>
+                </div>
+                <button type="button" class="btn btn-primary btn-block" id="btnCreate"><svg><use href="#i-plus"/></svg>Buat invoice</button>
+                <details class="dbg" id="createDbg" hidden>
+                  <summary>Debug JSON</summary>
+                  <pre id="createOut"></pre>
+                </details>
+              </div>
+            </div>
+
+            <div class="card preview" id="createResult" hidden>
+              <div class="card-head">
+                <div>
+                  <h2>QRIS siap dibayar</h2>
+                  <p id="resExp"></p>
+                </div>
+                <span class="badge badge-pending" id="resStatus">pending</span>
+              </div>
+              <div class="preview-body">
+                <div class="qr-frame">
+                  <img id="resQr" alt="QRIS pembayaran" width="280" height="280" />
+                  <div class="qr-shine"></div>
+                </div>
+                <div class="amount-line">
+                  <strong id="resAmount">—</strong>
+                  <span class="chip" id="resUnique" hidden></span>
+                </div>
+                <div class="kv">
+                  <div><span>Invoice ID</span><code id="resId">—</code></div>
+                  <div><span>Merchant ref</span><code id="resRef">—</code></div>
+                </div>
+                <button type="button" class="btn btn-soft btn-block" id="btnCopyPayload"><svg><use href="#i-copy"/></svg>Salin payload QRIS</button>
+                <details class="dbg">
+                  <summary>Lihat payload</summary>
+                  <pre id="resPayload"></pre>
+                </details>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ═══ Tab: Invoices ═══ -->
+        <section id="tab-list" class="tab">
+          <div class="stat-grid stat-mini" id="statList"></div>
+
+          <div class="card">
+            <div class="card-head between">
+              <div>
+                <h2>Daftar invoice</h2>
+                <p id="listMeta">Muat data…</p>
+              </div>
+              <div class="toolbar">
+                <div class="segmented" id="segFilter" role="tablist" aria-label="Filter status">
+                  <button type="button" class="seg active" data-status="">Semua</button>
+                  <button type="button" class="seg" data-status="pending">Pending</button>
+                  <button type="button" class="seg" data-status="paid">Paid</button>
+                  <button type="button" class="seg" data-status="expired">Expired</button>
+                </div>
+                <button type="button" class="btn btn-ghost btn-sm" id="btnRefresh"><svg><use href="#i-refresh"/></svg>Refresh</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table class="tbl">
+                <thead>
+                  <tr>
+                    <th>Invoice</th>
+                    <th>Ref</th>
+                    <th class="num">Amount</th>
+                    <th>Status</th>
+                    <th>Dibuat</th>
+                    <th class="num"></th>
+                  </tr>
+                </thead>
+                <tbody id="invBody"></tbody>
+              </table>
+              <div class="empty" id="invEmpty" hidden>
+                <span class="empty-ico"><svg><use href="#i-list"/></svg></span>
+                <p id="invEmptyText">Belum ada invoice.</p>
+                <button type="button" class="btn btn-soft btn-sm" data-tab="create"><svg><use href="#i-plus"/></svg>Buat invoice pertama</button>
+              </div>
+            </div>
+            <details class="dbg" id="listDbg" hidden>
+              <summary>Debug JSON</summary>
+              <pre id="listOut"></pre>
+            </details>
+          </div>
+        </section>
+      </main>
+
+      <footer class="foot muted">
+        <span>qris-pg · mutasi via GoBiz poll · callback HMAC-SHA256</span>
+        <span id="footClock"></span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ═══ Modal detail invoice ═══ -->
+  <div class="modal" id="invModal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <div>
+          <h2 id="modalTitle">Detail invoice</h2>
+          <p id="modalSub">—</p>
+        </div>
+        <button type="button" class="icon-btn" id="modalClose" aria-label="Tutup"><svg><use href="#i-x"/></svg></button>
+      </div>
+      <div class="modal-body">
+        <div class="kv kv-2col" id="modalKv"></div>
+        <div class="modal-payload">
+          <span>QRIS payload</span>
+          <div class="code-copy">
+            <code id="modalPayload">—</code>
+            <button type="button" class="icon-btn btn-copy" data-copy="modalPayload" aria-label="Salin payload"><svg><use href="#i-copy"/></svg></button>
+          </div>
+        </div>
+        <details class="dbg">
+          <summary>JSON lengkap</summary>
+          <pre id="modalJson"></pre>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
   <script src="/app.js"></script>
 </body>
