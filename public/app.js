@@ -485,7 +485,6 @@ $("btnCopyPayload").onclick = () => copyText($("resPayload").textContent, "Paylo
 let invCache = [];
 let segStatus = "";
 let searchQ = "";
-let curInvId = "";
 
 document.querySelectorAll("#segFilter .seg").forEach((seg) => {
   seg.addEventListener("click", () => {
@@ -517,8 +516,10 @@ function renderList() {
       <td class="num">${fmtRp(inv.amount)}</td>
       <td><span class="badge ${badgeCls(inv.status)}">${statusLabel(inv.status)}</span></td>
       <td class="time-cell" title="${esc(fmtDt(inv.created_at))}">${fmtRel(inv.created_at)}</td>
+      <td class="time-cell">${inv.callback_url ? (inv.callback_attempts ?? 0) + "x" : "—"}</td>
       <td class="row-act">
         <button type="button" class="icon-btn" data-view="${esc(inv.id)}" aria-label="Detail invoice ${esc(inv.id)}">${icon("eye")}</button>
+        <button type="button" class="icon-btn" data-resend="${esc(inv.id)}" title="Kirim ulang callback" aria-label="Kirim ulang callback ${esc(inv.id)}" ${inv.callback_url ? "" : "disabled"}>${icon("refresh")}</button>
       </td>`;
     tbody.appendChild(tr);
   }
@@ -562,25 +563,27 @@ async function loadList() {
 
 /* ── Modal detail invoice ────────────────────────────── */
 $("invBody").addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-view]");
-  if (btn) openInvoiceModal(btn.dataset.view);
+  const viewBtn = e.target.closest("[data-view]");
+  if (viewBtn) openInvoiceModal(viewBtn.dataset.view);
+  const rsBtn = e.target.closest("[data-resend]");
+  if (rsBtn) resendCallback(rsBtn.dataset.resend, rsBtn);
 });
 $("modalClose").addEventListener("click", closeModal);
 $("invModal").addEventListener("click", (e) => {
   if (e.target === $("invModal")) closeModal();
 });
-$("modalResend").addEventListener("click", async () => {
-  const btn = $("modalResend");
+async function resendCallback(id, btn) {
   btn.disabled = true;
   try {
-    const r = await api("/api/invoices/" + encodeURIComponent(curInvId) + "/resend", { method: "POST" });
+    const r = await api("/api/invoices/" + encodeURIComponent(id) + "/resend", { method: "POST" });
     toast("Callback dikirim ulang", "HTTP " + (r.status ?? 200) + " — target menerima webhook.", "success");
+    loadList(); // refresh attempts di tabel
   } catch (e) {
     toast("Callback gagal", e.message, "error");
   } finally {
     btn.disabled = false;
   }
-});
+}
 document.querySelectorAll("[data-copy]").forEach((b) => {
   b.addEventListener("click", () => copyText($(b.dataset.copy).textContent, "Payload disalin"));
 });
@@ -592,10 +595,6 @@ function closeModal() {
 function openInvoiceModal(id) {
   const inv = invCache.find((i) => i.id === id);
   if (!inv) return;
-  curInvId = inv.id;
-  const resendBtn = $("modalResend");
-  resendBtn.hidden = !inv.callback_url;
-  resendBtn.disabled = false;
   $("modalTitle").textContent = "Invoice " + id;
   $("modalSub").textContent = statusLabel(inv.status) + " · " + fmtRel(inv.created_at);
   $("modalKv").innerHTML = `

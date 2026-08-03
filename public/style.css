@@ -244,6 +244,7 @@ p { margin: 0; }
   transition: background 0.15s ease, color 0.15s ease, border 0.15s ease;
 }
 .icon-btn:hover { background: var(--bg-soft); color: var(--text); }
+.icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .icon-btn svg { width: 16px; height: 16px; }
 
 .user-chip {

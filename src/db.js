@@ -67,6 +67,7 @@ export function publicInvoice(row) {
     expires_at: row.expires_at,
     paid_at: row.paid_at,
     tx_id: row.tx_id,
+    callback_attempts: row.callback_attempts,
     created_at: row.created_at,
   };
 }
