@@ -29,7 +29,7 @@ import {
   setSetting,
 } from "./db.js";
 import { testConnection } from "./gobiz.js";
-import { runPoll } from "./poll.js";
+import { runPoll, sendCallback, callbackSecret } from "./poll.js";
 import { staticToDynamic, validateQris } from "./qris.js";
 
 function json(data, status = 200, extra = {}) {
@@ -247,6 +247,21 @@ async function handleApi(request, env, ctx) {
     const limit = url.searchParams.get("limit");
     const rows = await listInvoices(env.DB, { status, limit });
     return json({ invoices: rows.map(publicInvoice) });
+  }
+
+  // manual callback resend — POST /api/invoices/:id/resend
+  const resendMatch = path.match(/^\/api\/invoices\/([a-zA-Z0-9_-]+)\/resend$/);
+  if (method === "POST" && resendMatch) {
+    const inv = await getInvoice(env.DB, resendMatch[1]);
+    if (!inv) return err("not found", 404, "NOT_FOUND");
+    if (!inv.callback_url) return err("invoice tanpa callback url", 400, "NO_CALLBACK");
+    const r = await sendCallback(inv, callbackSecret(env));
+    if (r.ok) {
+      await env.DB.prepare("UPDATE invoices SET callback_sent = 1, callback_attempts = 0 WHERE id = ?").bind(inv.id).run();
+      return json({ ok: true, status: r.status });
+    }
+    await env.DB.prepare("UPDATE invoices SET callback_attempts = min(callback_attempts + 1, 5) WHERE id = ?").bind(inv.id).run();
+    return err("callback gagal: " + (r.error || "http " + r.status), 502, "CALLBACK_FAILED");
   }
 
   const invMatch = path.match(/^\/api\/invoices\/([a-zA-Z0-9_-]+)$/);

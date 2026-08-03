@@ -14,7 +14,7 @@ import { fetchTransactions, refreshAccessToken } from "./gobiz.js";
 /** Callback signing secret — separate from the API auth key so a merchant who
  * holds API_KEY cannot forge callback signatures. Falls back to API_KEY when
  * CALLBACK_SECRET is not set (backwards compatible). */
-function callbackSecret(env) {
+export function callbackSecret(env) {
   return env.CALLBACK_SECRET || env.API_KEY;
 }
 

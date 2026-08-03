@@ -343,6 +343,7 @@
         <button type="button" class="icon-btn" id="modalClose" aria-label="Tutup"><svg><use href="#i-x"/></svg></button>
       </div>
       <div class="modal-body">
+        <div class="qr-frame" id="modalQrWrap" hidden><img id="modalQr" alt="QRIS invoice" /></div>
         <div class="kv kv-2col" id="modalKv"></div>
         <div class="modal-payload">
           <span>QRIS payload</span>
@@ -351,6 +352,7 @@
             <button type="button" class="icon-btn btn-copy" data-copy="modalPayload" aria-label="Salin payload"><svg><use href="#i-copy"/></svg></button>
           </div>
         </div>
+        <button type="button" class="btn btn-soft btn-block" id="modalResend" hidden><svg><use href="#i-refresh"/></svg>Kirim ulang callback</button>
         <details class="dbg">
           <summary>JSON lengkap</summary>
           <pre id="modalJson"></pre>

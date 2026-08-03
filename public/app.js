@@ -485,6 +485,7 @@ $("btnCopyPayload").onclick = () => copyText($("resPayload").textContent, "Paylo
 let invCache = [];
 let segStatus = "";
 let searchQ = "";
+let curInvId = "";
 
 document.querySelectorAll("#segFilter .seg").forEach((seg) => {
   seg.addEventListener("click", () => {
@@ -568,6 +569,18 @@ $("modalClose").addEventListener("click", closeModal);
 $("invModal").addEventListener("click", (e) => {
   if (e.target === $("invModal")) closeModal();
 });
+$("modalResend").addEventListener("click", async () => {
+  const btn = $("modalResend");
+  btn.disabled = true;
+  try {
+    const r = await api("/api/invoices/" + encodeURIComponent(curInvId) + "/resend", { method: "POST" });
+    toast("Callback dikirim ulang", "HTTP " + (r.status ?? 200) + " — target menerima webhook.", "success");
+  } catch (e) {
+    toast("Callback gagal", e.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+});
 document.querySelectorAll("[data-copy]").forEach((b) => {
   b.addEventListener("click", () => copyText($(b.dataset.copy).textContent, "Payload disalin"));
 });
@@ -579,6 +592,10 @@ function closeModal() {
 function openInvoiceModal(id) {
   const inv = invCache.find((i) => i.id === id);
   if (!inv) return;
+  curInvId = inv.id;
+  const resendBtn = $("modalResend");
+  resendBtn.hidden = !inv.callback_url;
+  resendBtn.disabled = false;
   $("modalTitle").textContent = "Invoice " + id;
   $("modalSub").textContent = statusLabel(inv.status) + " · " + fmtRel(inv.created_at);
   $("modalKv").innerHTML = `
@@ -592,6 +609,17 @@ function openInvoiceModal(id) {
     <div><span>TX ID</span><code title="${esc(inv.tx_id || "")}">${esc(inv.tx_id || "—")}</code></div>`;
   $("modalPayload").textContent = inv.qris_payload || "—";
   $("modalJson").textContent = JSON.stringify(inv, null, 2);
+  // ponytail: reuse qrcode pattern from create tab
+  const qrWrap = $("modalQrWrap");
+  if (inv.qris_payload && typeof qrcode === "function") {
+    const qr = qrcode(0, "M");
+    qr.addData(inv.qris_payload);
+    qr.make();
+    $("modalQr").src = qr.createDataURL(8, 4);
+    qrWrap.hidden = false;
+  } else {
+    qrWrap.hidden = true;
+  }
   $("invModal").hidden = false;
   document.body.style.overflow = "hidden";
 }
