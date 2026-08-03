@@ -673,7 +673,7 @@ function qrisShowLogin() {
 }
 
 function qrisRenderGate() {
-  const signed = window.Clerk && window.Clerk.isSignedIn?.();
+  const signed = !!(window.Clerk && window.Clerk.user);
   if (signed) qrisShowApp();
   else qrisShowLogin();
 }
