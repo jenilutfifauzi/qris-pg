@@ -4,7 +4,6 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const CLERK_PK = (document.querySelector("meta[name='clerk-publishable-key']") || {}).content || "";
 
 function esc(s) {
   return String(s ?? "").replace(
@@ -691,7 +690,7 @@ function qrisFallbackOpen() {
 async function initAuth() {
   try {
     if (window.Clerk) {
-      await window.Clerk.load({ publishableKey: CLERK_PK });
+      await window.Clerk.load(); // key dari data-clerk-publishable-key di script tag
       window.Clerk.addListener(qrisRenderGate);
       qrisRenderGate();
     } else {
