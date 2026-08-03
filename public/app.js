@@ -509,6 +509,9 @@ function renderList() {
   const tbody = $("invBody");
   tbody.innerHTML = "";
   for (const inv of rows) {
+    const cb = inv.callback_url
+      ? (inv.callback_sent ? "✓" : "✗") + (inv.callback_attempts > 0 ? " " + inv.callback_attempts + "x" : "")
+      : "—";
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td><code class="inv-id">${esc(inv.id)}</code></td>
@@ -516,7 +519,7 @@ function renderList() {
       <td class="num">${fmtRp(inv.amount)}</td>
       <td><span class="badge ${badgeCls(inv.status)}">${statusLabel(inv.status)}</span></td>
       <td class="time-cell" title="${esc(fmtDt(inv.created_at))}">${fmtRel(inv.created_at)}</td>
-      <td class="time-cell">${inv.callback_url ? (inv.callback_attempts ?? 0) + "x" : "—"}</td>
+      <td class="time-cell" title="✓ terkirim · ✗ gagal · Nx = jumlah retry">${cb}</td>
       <td class="row-act">
         <button type="button" class="icon-btn" data-view="${esc(inv.id)}" aria-label="Detail invoice ${esc(inv.id)}">${icon("eye")}</button>
         <button type="button" class="icon-btn" data-resend="${esc(inv.id)}" title="Kirim ulang callback" aria-label="Kirim ulang callback ${esc(inv.id)}" ${inv.callback_url ? "" : "disabled"}>${icon("refresh")}</button>
