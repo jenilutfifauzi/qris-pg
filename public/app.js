@@ -687,15 +687,31 @@ function qrisFallbackOpen() {
   }
 }
 
+// v5 vanilla butuh @clerk/ui terpisah; load dari frontend API domain (pola resmi di docs)
+function loadClerkUi() {
+  if (window.__internal_ClerkUICtor) return Promise.resolve();
+  let domain = null;
+  try { domain = CLERK_PK ? atob(CLERK_PK.split("_")[2]).slice(0, -1) : null; } catch (_) {}
+  if (!domain) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = `https://${domain}/npm/@clerk/ui@1/dist/ui.browser.js`;
+    s.async = true; s.crossOrigin = "anonymous";
+    s.onload = resolve; s.onerror = () => reject(new Error("Gagal load @clerk/ui"));
+    document.head.appendChild(s);
+  });
+}
+
 async function initAuth() {
   try {
-    if (window.Clerk) {
-      await window.Clerk.load(); // key dari data-clerk-publishable-key di script tag
-      window.Clerk.addListener(qrisRenderGate);
-      qrisRenderGate();
-    } else {
-      qrisShowLogin();
-    }
+    await loadClerkUi();
+    if (!window.Clerk) return qrisShowLogin();
+    await window.Clerk.load({
+      publishableKey: CLERK_PK,
+      ui: { ClerkUI: window.__internal_ClerkUICtor },
+    });
+    window.Clerk.addListener(qrisRenderGate);
+    qrisRenderGate();
   } catch (e) {
     console.error("clerk boot failed", e);
     qrisShowApp();
