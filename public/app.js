@@ -4,6 +4,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
+const CLERK_PK = (document.querySelector("meta[name='qris-clerk-pk']") || {}).content || "";
 
 function esc(s) {
   return String(s ?? "").replace(
@@ -238,6 +239,10 @@ $("userMenu").addEventListener("click", (e) => {
     localStorage.removeItem("qris_pg_last_poll");
     toast("API key dihapus", "Key hanya tersimpan di browser Anda — paste ulang saat diperlukan.", "info");
     setTimeout(() => location.reload(), 900);
+  }
+  if (act === "logout") {
+    closeDd($("userMenu"));
+    if (window.Clerk) window.Clerk.signOut(); // listener renderAuth -> kembali ke layar login
   }
 });
 
@@ -626,9 +631,77 @@ function openInvoiceModal(id) {
   document.body.style.overflow = "hidden";
 }
 
-/* ── Init ────────────────────────────────────────────── */
-checkHealth();
-setInterval(checkHealth, 60000);
-tickClock();
-setInterval(tickClock, 30000);
-switchTab("setup");
+/* ── Auth (Clerk) ────────────────────────────────────── */
+let qrisBooted = false;
+const authTimeoutMs = 7000;
+
+function qrisShowApp() {
+  const gate = $("clerkLogin");
+  const shell = $("appShell");
+  if (gate) gate.hidden = true;
+  if (shell) shell.hidden = false;
+  const u = window.Clerk && window.Clerk.user;
+  if (u) {
+    const name = u.primaryEmailAddress?.emailAddress || u.username || u.firstName || u.lastName || "admin";
+    const nm = $("userName");
+    if (nm) nm.textContent = name;
+    const role = $("userRole");
+    if (role) role.textContent = "Clerk";
+  }
+  if (qrisBoot) return;
+  qrisBoot = true;
+  checkHealth();
+  setInterval(checkHealth, 60000);
+  tickClock();
+  setInterval(tickClock, 30000);
+  switchTab("setup");
+}
+
+function qrisShowLogin() {
+  const gate = $("clerkLogin");
+  const shell = $("appShell");
+  if (gate) gate.hidden = false;
+  if (shell) shell.hidden = true;
+  if (window.qrisSignInMounted) return;
+  if (window.Clerk && typeof window.Clerk.mountSignIn === "function") {
+    try {
+      window.Clerk.mountSignIn("#clerkMount");
+      window.qrisSignInMounted = true;
+    } catch (e) {
+      console.error("clerk mountSignIn failed", e);
+    }
+  }
+}
+
+function qrisRenderGate() {
+  const signed = window.Clerk && window.Clerk.isSignedIn?.();
+  if (signed) qrisShowApp();
+  else qrisShowLogin();
+}
+
+// Fallback: kalau Clerk CDN gagal/terblokir (offline), tetap buka app — data
+// tetap aman karena /api/* masih di-guard API key.
+function qrisFallbackOpen() {
+  if (!qrisBoot) {
+    toast("Clerk tidak tersedia", "Fallback dibuka tanpa login — API key pada /api masih aktif.", "info", 5000);
+    qrisShowApp();
+  }
+}
+
+async function initAuth() {
+  try {
+    if (window.Clerk) {
+      await window.Clerk.load({ publishableKey: CLERK_PK });
+      window.Clerk.addListener(qrisRenderGate);
+      qrisRenderGate();
+    } else {
+      qrisShowLogin();
+    }
+  } catch (e) {
+    console.error("clerk boot failed", e);
+    qrisShowApp();
+  }
+}
+
+initAuth();
+setTimeout(qrisFallbackOpen, authTimeoutMs);

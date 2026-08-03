@@ -247,6 +247,12 @@ p { margin: 0; }
 .icon-btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .icon-btn svg { width: 16px; height: 16px; }
 
+.clerk-login { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; background: var(--bg); }
+.clerk-card { width: 100%; max-width: 420px; text-align: center; }
+.clerk-logo { width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 8px 24px rgba(37,99,235,.25); }
+.clerk-card h2 { margin: 14px 0 6px; font-size: 1.2rem; }
+.clerk-card .cl-rootBox { margin: 0 auto; }
+
 .user-chip {
   display: flex; align-items: center; gap: 9px;
   border: 1px solid var(--border);
