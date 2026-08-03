@@ -2,7 +2,7 @@
 
 [![version](https://img.shields.io/badge/version-1.0.0-blue)](https://jenilutfifauzi.github.io/qris-pg/)
 [![license](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![docs](https://img.shields.io/badge/docs-GitHub%20Pages-orange)](https://jenilutfifauzi.github.io/qris-pg/)
+[![docs](https://img.shields.io/badge/docs-GitHub%20Pages-orange)](https://jenilutfifauzi.github.io/qris-pg/#/)
 
 QRIS payment kit di **Cloudflare Workers**: static→dynamic, kode unik, poll mutasi GoBiz, callback HMAC-signed, WebUI, auto-refresh token.
 
