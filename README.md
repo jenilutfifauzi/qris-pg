@@ -27,6 +27,8 @@ Create → unique amount + QR dynamic → D1 pending
 Cron 1×/menit → poll mutasi → match amount → paid + callback
 ```
 
+![Alur qris-pg](docs/assets/qris-pg-flow.png)
+
 Bukan webhook Gojek — kit ini yang melakukan polling.
 
 ---
