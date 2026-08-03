@@ -63,7 +63,7 @@ Portal → **Transaksi** → F12 Network → request `transactions` **200** → 
 
 ---
 
-## Secrets (tidak di git)
+## Secrets
 
 | Apa | Di mana |
 |-----|---------|
