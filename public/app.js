@@ -4,7 +4,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const CLERK_PK = (document.querySelector("meta[name='qris-clerk-pk']") || {}).content || "";
+const CLERK_PK = (document.querySelector("meta[name='clerk-publishable-key']") || {}).content || "";
 
 function esc(s) {
   return String(s ?? "").replace(
