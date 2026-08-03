@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="color-scheme" content="light" />
-  <meta name="qris-clerk-pk" content="pk_test_b3B0aW11bS1lc2NhcmdvdC05NS5jbGVyay5hY2NvdW50cy5kZXYk" />
   <title>qris-pg · Dashboard</title>
   <link rel="stylesheet" href="/style.css" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232563eb'/%3E%3Cpath d='M8 21l4-8 4 5 4-7 4 10z' fill='white'/%3E%3C/svg%3E" />
@@ -43,15 +42,7 @@
     <symbol id="i-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></symbol>
   </svg>
 
-  <div class="clerk-login" id="clerkLogin" hidden>
-    <div class="clerk-card">
-      <svg class="clerk-logo" viewBox="0 0 32 32"><rect width="32" height="32" rx="8" fill="#2563eb"/><path d="M8 21l4-8 4 5 4-7 4 10z" fill="white"/></svg>
-      <h2>Login qris-pg</h2>
-      <div id="clerkMount"></div>
-    </div>
-  </div>
-
-  <div class="app" id="appShell">
+  <div class="app">
     <!-- ═══ Sidebar ═══ -->
     <aside class="sidebar" id="sidebar" aria-label="Navigasi utama">
       <div class="sidebar-top">
@@ -119,7 +110,6 @@
             </button>
             <div class="dd-menu dd-right" id="userMenu" hidden>
               <button type="button" data-act="reload"><svg><use href="#i-refresh"/></svg>Reload data</button>
-              <button type="button" data-act="logout"><svg><use href="#i-out"/></svg>Logout</button>
               <button type="button" data-act="clear"><svg><use href="#i-out"/></svg>Keluar (hapus API key)</button>
             </div>
           </div>
@@ -374,7 +364,6 @@
   <div class="toasts" id="toasts" aria-live="polite"></div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-  <script crossorigin="anonymous" src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@5/dist/clerk.browser.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -239,10 +239,6 @@ $("userMenu").addEventListener("click", (e) => {
     toast("API key dihapus", "Key hanya tersimpan di browser Anda — paste ulang saat diperlukan.", "info");
     setTimeout(() => location.reload(), 900);
   }
-  if (act === "logout") {
-    closeDd($("userMenu"));
-    if (window.Clerk) window.Clerk.signOut(); // listener renderAuth -> kembali ke layar login
-  }
 });
 
 /* ── Conn state + clock ──────────────────────────────── */
@@ -630,93 +626,9 @@ function openInvoiceModal(id) {
   document.body.style.overflow = "hidden";
 }
 
-/* ── Auth (Clerk) ────────────────────────────────────── */
-let qrisBooted = false;
-const authTimeoutMs = 7000;
-
-function qrisShowApp() {
-  const gate = $("clerkLogin");
-  const shell = $("appShell");
-  if (gate) gate.hidden = true;
-  if (shell) shell.hidden = false;
-  const u = window.Clerk && window.Clerk.user;
-  if (u) {
-    const name = u.primaryEmailAddress?.emailAddress || u.username || u.firstName || u.lastName || "admin";
-    const nm = $("userName");
-    if (nm) nm.textContent = name;
-    const role = $("userRole");
-    if (role) role.textContent = "Clerk";
-  }
-  if (qrisBoot) return;
-  qrisBoot = true;
-  checkHealth();
-  setInterval(checkHealth, 60000);
-  tickClock();
-  setInterval(tickClock, 30000);
-  switchTab("setup");
-}
-
-function qrisShowLogin() {
-  const gate = $("clerkLogin");
-  const shell = $("appShell");
-  if (gate) gate.hidden = false;
-  if (shell) shell.hidden = true;
-  if (window.qrisSignInMounted) return;
-  if (window.Clerk && typeof window.Clerk.mountSignIn === "function") {
-    try {
-      window.Clerk.mountSignIn("#clerkMount");
-      window.qrisSignInMounted = true;
-    } catch (e) {
-      console.error("clerk mountSignIn failed", e);
-    }
-  }
-}
-
-function qrisRenderGate() {
-  const signed = !!(window.Clerk && window.Clerk.user);
-  if (signed) qrisShowApp();
-  else qrisShowLogin();
-}
-
-// Fallback: kalau Clerk CDN gagal/terblokir (offline), tetap buka app — data
-// tetap aman karena /api/* masih di-guard API key.
-function qrisFallbackOpen() {
-  if (!qrisBoot) {
-    toast("Clerk tidak tersedia", "Fallback dibuka tanpa login — API key pada /api masih aktif.", "info", 5000);
-    qrisShowApp();
-  }
-}
-
-// v5 vanilla butuh @clerk/ui terpisah; load dari frontend API domain (pola resmi di docs)
-function loadClerkUi() {
-  if (window.__internal_ClerkUICtor) return Promise.resolve();
-  let domain = null;
-  try { domain = CLERK_PK ? atob(CLERK_PK.split("_")[2]).slice(0, -1) : null; } catch (_) {}
-  if (!domain) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const s = document.createElement("script");
-    s.src = `https://${domain}/npm/@clerk/ui@1/dist/ui.browser.js`;
-    s.async = true; s.crossOrigin = "anonymous";
-    s.onload = resolve; s.onerror = () => reject(new Error("Gagal load @clerk/ui"));
-    document.head.appendChild(s);
-  });
-}
-
-async function initAuth() {
-  try {
-    await loadClerkUi();
-    if (!window.Clerk) return qrisShowLogin();
-    await window.Clerk.load({
-      publishableKey: CLERK_PK,
-      ui: { ClerkUI: window.__internal_ClerkUICtor },
-    });
-    window.Clerk.addListener(qrisRenderGate);
-    qrisRenderGate();
-  } catch (e) {
-    console.error("clerk boot failed", e);
-    qrisShowApp();
-  }
-}
-
-initAuth();
-setTimeout(qrisFallbackOpen, authTimeoutMs);
+/* ── Init ────────────────────────────────────────────── */
+checkHealth();
+setInterval(checkHealth, 60000);
+tickClock();
+setInterval(tickClock, 30000);
+switchTab("setup");
