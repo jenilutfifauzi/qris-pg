@@ -77,7 +77,7 @@ p { margin: 0; }
 .muted { color: var(--text-3); font-size: 0.82rem; }
 
 /* ═══ Layout ═══ */
-.app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; min-height: 100vh; }
+.app { display: grid; min-height: 100vh; }
 
 .main {
   display: flex;
